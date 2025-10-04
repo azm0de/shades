@@ -1,0 +1,11 @@
+{
+  "colors": {
+    "window_bg": "#1E1E1E",
+    "window_text": "#D4D4D4",
+    "highlight_bg": "#2A2D2E",
+    "highlight_text": "#FFFFFF",
+    "button_face": "#333333",
+    "button_text": "#D4D4D4",
+    "header_bg": "#333333"
+  }
+}

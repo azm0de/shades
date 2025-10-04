@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(cmake:*)",
+      "Bash(winget install:*)",
+      "Bash(curl:*)",
+      "Bash(where cl)",
+      "Bash(where:*)",
+      "Bash(\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\Tools\\VsDevCmd.bat\")",
+      "Bash(nmake:*)",
+      "Bash(cmd /c:*)",
+      "Bash(powershell:*)",
+      "Read(//c/Program Files (x86)/Microsoft Visual Studio/**)",
+      "Bash(\"C:/Program Files/CMake/bin/cmake.exe\" -S ThemeEngine -B ThemeEngine/build -G \"NMake Makefiles\" -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=\"C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/nmake.exe\" -DCMAKE_C_COMPILER=\"C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/cl.exe\" -DCMAKE_CXX_COMPILER=\"C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/cl.exe\")",
+      "Bash(\"C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/nmake.exe\")",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
