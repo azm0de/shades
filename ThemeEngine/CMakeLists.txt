@@ -22,6 +22,6 @@ add_library(ThemeEngine SHARED ThemeEngine.cpp)
 
 # Link against the necessary Windows libraries
 target_link_libraries(ThemeEngine PRIVATE
-    user32 gdi32 uxtheme Comctl32
+    user32 gdi32 uxtheme comctl32
     "${DETOURS_PATH}/lib.x64/detours.lib"
 )
