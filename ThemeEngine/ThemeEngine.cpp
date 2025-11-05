@@ -1,6 +1,6 @@
 #include <windows.h>
 #include <uxtheme.h>
-#include <CommCtrl.h>
+#include <commctrl.h>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -153,9 +153,9 @@ void InitializeTheme() {
     LoadTheme();
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
-    DetourAttach(&(PVOID&)TrueGetSysColor, DetouredGetSysColor);
-    DetourAttach(&(PVOID&)TrueGetSysColorBrush, DetouredGetSysColorBrush);
-    DetourAttach(&(PVOID&)TrueDrawThemeBackground, DetouredDrawThemeBackground);
+    DetourAttach((PVOID*)&TrueGetSysColor, (PVOID)DetouredGetSysColor);
+    DetourAttach((PVOID*)&TrueGetSysColorBrush, (PVOID)DetouredGetSysColorBrush);
+    DetourAttach((PVOID*)&TrueDrawThemeBackground, (PVOID)DetouredDrawThemeBackground);
     DetourTransactionCommit();
 
     HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
@@ -173,9 +173,9 @@ void DeinitializeTheme() {
     }
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
-    DetourDetach(&(PVOID&)TrueGetSysColor, DetouredGetSysColor);
-    DetourDetach(&(PVOID&)TrueGetSysColorBrush, DetouredGetSysColorBrush);
-    DetourDetach(&(PVOID&)TrueDrawThemeBackground, DetouredDrawThemeBackground);
+    DetourDetach((PVOID*)&TrueGetSysColor, (PVOID)DetouredGetSysColor);
+    DetourDetach((PVOID*)&TrueGetSysColorBrush, (PVOID)DetouredGetSysColorBrush);
+    DetourDetach((PVOID*)&TrueDrawThemeBackground, (PVOID)DetouredDrawThemeBackground);
     DetourTransactionCommit();
 
     if (g_ThemeLoaded) {
