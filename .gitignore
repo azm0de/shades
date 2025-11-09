@@ -22,8 +22,11 @@ Release/
 *.ilk
 *.exp
 
-# Exception: Distribution installer
+# Exception: Distribution files
 !dist/EventViewerThemer-Setup.exe
+!dist/EventViewerThemer/*.exe
+!dist/EventViewerThemer/*.dll
+!dist/*.zip
 
 # CMake generated files
 CMakeCache.txt
