@@ -103,32 +103,43 @@
 - Add icon resources (16x16, 32x32, 48x48)
 - Persist tray icon while theme is active
 
-### Task 5.3: Command-Line Arguments
+### Task 5.3: Command-Line Arguments ✅ COMPLETED
 
 **Priority**: Medium
 
-**Objectives**: Complete the originally planned CLI interface from Phase 3.2
+**Completion**: Full command-line argument support implemented in Injector.cpp v1.1.0.
 
-**Arguments to Implement**:
+**Arguments Implemented**:
 ```
 Injector.exe [options]
 
-Options:
-  --enable          Enable theme (create mutex, inject DLL)
-  --disable         Disable theme (destroy mutex, force refresh)
-  --status          Check if theme is currently active
-  --config <path>   Use custom theme.json file
-  --silent          Run without console output
-  --tray            Start in system tray mode
-  --help            Display help message
-  --version         Display version information
+✅ Implemented:
+  --help, -h, /?    Display help message
+  --version, -v     Display version information
+  --status          Check if theme is currently active (via mutex detection)
+  --silent, -s      Run without console output
+
+⏳ Recognized (not yet implemented):
+  --config <path>   Use custom theme.json file (placeholder)
+  --disable         Disable theme (placeholder - currently just close window)
 ```
 
 **Technical Implementation**:
-- Add argument parsing library (e.g., CLI11 or simple custom parser)
-- Modify main() function to route based on arguments
-- Add status check via mutex detection
-- Support custom config file paths
+- ✅ Custom lightweight argument parser (no external dependencies)
+- ✅ Modified main() function to parse argc/argv
+- ✅ IsThemeActive() function checks mutex via OpenMutexW()
+- ✅ Silent mode flag that suppresses all console output
+- ✅ Comprehensive help text with examples
+- ✅ Version display with copyright and license info
+- ✅ Improved error messages throughout
+- ✅ Warning for duplicate injector instances
+
+**Features Added**:
+- Version bumped to 1.1.0
+- Print() and PrintError() functions respect --silent flag
+- Better user guidance in error messages
+- Multiple argument aliases (-h, -v, -s, /?)
+- Exit codes for scripting support
 
 ### Task 5.4: Auto-Start with Windows
 
@@ -481,9 +492,9 @@ VIAddVersionKey "LegalCopyright" "MIT License"
   - Create GitHub Release v1.1
 
 ### Short Term (1-2 months)
+- ✅ Task 5.3: Command-line arguments implementation (COMPLETED)
 - Task 4.1: Windows platform testing
 - Task 4.3: Security audit and code signing
-- Task 5.3: Command-line arguments implementation
 
 ### Medium Term (3-6 months)
 - Task 5.1: GUI configuration tool

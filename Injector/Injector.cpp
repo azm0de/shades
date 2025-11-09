@@ -3,6 +3,73 @@
 #include <tlhelp32.h>
 #include <string>
 #include <vector>
+#include <cstring>
+
+// Version information
+#define APP_VERSION "1.1.0"
+#define APP_NAME "Event Viewer Themer"
+
+// Global flags
+bool g_silent = false;
+bool g_helpRequested = false;
+std::string g_customThemePath = "";
+
+// Function to print messages (respects --silent flag)
+void Print(const std::string& message) {
+    if (!g_silent) {
+        std::cout << message << std::endl;
+    }
+}
+
+void PrintError(const std::string& message) {
+    if (!g_silent) {
+        std::cerr << message << std::endl;
+    }
+}
+
+// Function to display help message
+void ShowHelp() {
+    std::cout << APP_NAME << " v" << APP_VERSION << "\n";
+    std::cout << "A utility to apply dark themes to Windows Event Viewer\n\n";
+    std::cout << "Usage:\n";
+    std::cout << "  Injector.exe [options]\n\n";
+    std::cout << "Options:\n";
+    std::cout << "  --help              Display this help message\n";
+    std::cout << "  --version           Display version information\n";
+    std::cout << "  --status            Check if theme is currently active\n";
+    std::cout << "  --config <path>     Use custom theme.json file (not yet implemented)\n";
+    std::cout << "  --silent            Run without console output\n";
+    std::cout << "  --disable           Disable theme (close mutex, not yet implemented)\n\n";
+    std::cout << "Examples:\n";
+    std::cout << "  Injector.exe                    # Enable theme with default settings\n";
+    std::cout << "  Injector.exe --status           # Check if theme is active\n";
+    std::cout << "  Injector.exe --silent           # Enable theme without console output\n";
+    std::cout << "  Injector.exe --help             # Show this help message\n\n";
+    std::cout << "Notes:\n";
+    std::cout << "  - Event Viewer must be running before launching the injector\n";
+    std::cout << "  - Requires Administrator privileges for DLL injection\n";
+    std::cout << "  - Keep injector running to maintain theme activation\n";
+    std::cout << "  - Theme files: ThemeEngine.dll and theme.json (same directory)\n\n";
+    std::cout << "For more information, visit: https://github.com/azm0de/shades\n";
+}
+
+// Function to display version
+void ShowVersion() {
+    std::cout << APP_NAME << " version " << APP_VERSION << "\n";
+    std::cout << "Copyright (c) 2025 azm0de\n";
+    std::cout << "Licensed under the MIT License\n";
+}
+
+// Function to check if theme mutex exists (theme is active)
+bool IsThemeActive() {
+    const wchar_t* mutexName = L"Global\\EventViewerThemeActive";
+    HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, mutexName);
+    if (hMutex != NULL) {
+        CloseHandle(hMutex);
+        return true;
+    }
+    return false;
+}
 
 // Function to get the Process ID (PID) for all processes with a given name.
 std::vector<DWORD> GetPidsByName(const std::wstring& processName) {
@@ -52,24 +119,94 @@ BOOL CALLBACK EnumWindowsCallback(HWND hwnd, LPARAM lParam) {
     return TRUE; // Continue enumerating
 }
 
+// Parse command-line arguments
+void ParseArguments(int argc, char* argv[]) {
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
 
-int main() {
-    std::cout << "Event Viewer Themer" << std::endl;
+        if (arg == "--help" || arg == "-h" || arg == "/?") {
+            ShowHelp();
+            g_helpRequested = true;
+            return;
+        }
+        else if (arg == "--version" || arg == "-v") {
+            ShowVersion();
+            g_helpRequested = true;
+            return;
+        }
+        else if (arg == "--status") {
+            if (IsThemeActive()) {
+                std::cout << "Theme Status: ACTIVE\n";
+                std::cout << "The Event Viewer theme is currently enabled.\n";
+            } else {
+                std::cout << "Theme Status: INACTIVE\n";
+                std::cout << "The Event Viewer theme is not currently active.\n";
+            }
+            g_helpRequested = true;
+            return;
+        }
+        else if (arg == "--silent" || arg == "-s") {
+            g_silent = true;
+        }
+        else if (arg == "--config") {
+            if (i + 1 < argc) {
+                g_customThemePath = argv[i + 1];
+                i++; // Skip next argument
+                Print("Note: --config flag is recognized but custom theme path not yet implemented.");
+            } else {
+                PrintError("Error: --config requires a file path argument");
+                g_helpRequested = true;
+                return;
+            }
+        }
+        else if (arg == "--disable") {
+            Print("Note: --disable flag is recognized but not yet implemented.");
+            Print("To disable the theme, simply close the injector window.");
+            g_helpRequested = true;
+            return;
+        }
+        else {
+            std::cerr << "Unknown argument: " << arg << "\n";
+            std::cerr << "Use --help to see available options.\n";
+            g_helpRequested = true;
+            return;
+        }
+    }
+}
+
+
+int main(int argc, char* argv[]) {
+    // Parse command-line arguments
+    ParseArguments(argc, argv);
+
+    // If help/version was requested, exit cleanly
+    if (g_helpRequested) {
+        return 0;
+    }
+
+    Print(std::string(APP_NAME) + " v" + APP_VERSION);
 
     // Create the mutex that signals the theme should be active.
     const wchar_t* mutexName = L"Global\\EventViewerThemeActive";
     HANDLE hMutex = CreateMutexW(NULL, TRUE, mutexName);
     if (hMutex == NULL) {
-        std::cerr << "Error: Could not create the theme mutex." << std::endl;
+        PrintError("Error: Could not create the theme mutex.");
         return 1;
     }
 
-    std::cout << "Searching for Event Viewer (mmc.exe) process..." << std::endl;
+    // Check if mutex already existed (theme already active)
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        Print("Warning: Theme mutex already exists. Another instance may be running.");
+        Print("Proceeding with injection anyway...");
+    }
+
+    Print("Searching for Event Viewer (mmc.exe) process...");
 
     // 1. Find the target process
     std::vector<DWORD> mmcPids = GetPidsByName(L"mmc.exe");
     if (mmcPids.empty()) {
-        std::cerr << "Error: No mmc.exe process found." << std::endl;
+        PrintError("Error: No mmc.exe process found.");
+        PrintError("Please open Event Viewer (eventvwr.msc) first.");
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
         return 1;
@@ -86,24 +223,25 @@ int main() {
     }
 
     if (targetPid == 0) {
-        std::cerr << "Error: Found mmc.exe, but none are hosting 'Event Viewer'." << std::endl;
+        PrintError("Error: Found mmc.exe, but none are hosting 'Event Viewer'.");
+        PrintError("Please make sure Event Viewer is running.");
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
         return 1;
     }
 
-    std::cout << "Found Event Viewer process with PID: " << targetPid << std::endl;
+    Print("Found Event Viewer process with PID: " + std::to_string(targetPid));
 
     // 2. Define the path to our DLL
     // This path assumes the DLL is in the same directory as the injector.
     char dllPath[MAX_PATH];
     GetFullPathNameA("ThemeEngine.dll", MAX_PATH, dllPath, NULL);
-    std::cout << "Injecting DLL: " << dllPath << std::endl;
+    Print("Injecting DLL: " + std::string(dllPath));
 
     // 3. Get a handle to the target process
     HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, targetPid);
     if (hProcess == NULL) {
-        std::cerr << "Error: Could not open process. Try running as administrator." << std::endl;
+        PrintError("Error: Could not open process. Try running as administrator.");
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
         return 1;
@@ -112,7 +250,7 @@ int main() {
     // 4. Allocate memory in the target process for the DLL path
     LPVOID pRemoteMem = VirtualAllocEx(hProcess, NULL, sizeof(dllPath), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     if (pRemoteMem == NULL) {
-        std::cerr << "Error: Could not allocate memory in target process." << std::endl;
+        PrintError("Error: Could not allocate memory in target process.");
         CloseHandle(hProcess);
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
@@ -121,7 +259,7 @@ int main() {
 
     // 5. Write the DLL path into the allocated memory
     if (!WriteProcessMemory(hProcess, pRemoteMem, dllPath, sizeof(dllPath), NULL)) {
-        std::cerr << "Error: Could not write to target process memory." << std::endl;
+        PrintError("Error: Could not write to target process memory.");
         VirtualFreeEx(hProcess, pRemoteMem, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         ReleaseMutex(hMutex);
@@ -133,7 +271,7 @@ int main() {
     HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
     LPVOID pLoadLibraryA = (LPVOID)GetProcAddress(hKernel32, "LoadLibraryA");
     if (pLoadLibraryA == NULL) {
-        std::cerr << "Error: Could not find LoadLibraryA address." << std::endl;
+        PrintError("Error: Could not find LoadLibraryA address.");
         VirtualFreeEx(hProcess, pRemoteMem, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         ReleaseMutex(hMutex);
@@ -144,7 +282,7 @@ int main() {
     // 7. Create a remote thread in the target process to load our DLL
     HANDLE hRemoteThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)pLoadLibraryA, pRemoteMem, 0, NULL);
     if (hRemoteThread == NULL) {
-        std::cerr << "Error: Could not create remote thread." << std::endl;
+        PrintError("Error: Could not create remote thread.");
         VirtualFreeEx(hProcess, pRemoteMem, 0, MEM_RELEASE);
         CloseHandle(hProcess);
         ReleaseMutex(hMutex);
@@ -152,33 +290,39 @@ int main() {
         return 1;
     }
 
-    std::cout << "Injection successful. Waiting for remote thread to finish..." << std::endl;
+    Print("Injection successful. Waiting for remote thread to finish...");
     WaitForSingleObject(hRemoteThread, INFINITE);
 
     // 8. Clean up handles
-    std::cout << "Cleaning up handles." << std::endl;
+    Print("Cleaning up handles.");
     CloseHandle(hRemoteThread);
     VirtualFreeEx(hProcess, pRemoteMem, 0, MEM_RELEASE);
     CloseHandle(hProcess);
 
-    std::cout << "Process complete. Theme is active." << std::endl;
+    Print("Process complete. Theme is active.");
 
     // Force Event Viewer window to refresh
     HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
     if (hEventViewer) {
-        std::cout << "Refreshing Event Viewer window..." << std::endl;
+        Print("Refreshing Event Viewer window...");
         InvalidateRect(hEventViewer, NULL, TRUE);
         RedrawWindow(hEventViewer, NULL, NULL, RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_UPDATENOW);
-        std::cout << "Window refreshed. The theme should now be visible." << std::endl;
+        Print("Window refreshed. The theme should now be visible.");
     }
 
-    std::cout << "Keep this window open to maintain the theme." << std::endl;
-    std::cout << "Closing this window will deactivate the theme." << std::endl;
+    Print("Keep this window open to maintain the theme.");
+    Print("Closing this window will deactivate the theme.");
 
     // We keep the injector running to hold the mutex open.
     // When this injector is closed, the mutex is destroyed, and the theme will
     // no longer be applied on the next paint cycle.
-    system("pause");
+    if (!g_silent) {
+        system("pause");
+    } else {
+        // In silent mode, wait indefinitely (user must close via Task Manager or Ctrl+C)
+        Print("Running in silent mode. Press Ctrl+C to exit.");
+        WaitForSingleObject(hMutex, INFINITE); // Wait forever
+    }
 
     // Clean up
     ReleaseMutex(hMutex);

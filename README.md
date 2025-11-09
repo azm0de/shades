@@ -111,6 +111,60 @@ Event Viewer Themer transforms Windows Event Viewer from its default bright them
 - Leave Injector.exe running while using Event Viewer
 - You can minimize the window to the taskbar
 
+### Command-Line Arguments (v1.1+)
+
+The injector supports several command-line arguments for automation and scripting:
+
+```cmd
+Injector.exe [options]
+```
+
+**Available Options:**
+
+| Argument | Description | Example |
+|----------|-------------|---------|
+| `--help`, `-h`, `/?` | Display help message with all options | `Injector.exe --help` |
+| `--version`, `-v` | Display version information | `Injector.exe --version` |
+| `--status` | Check if theme is currently active | `Injector.exe --status` |
+| `--silent`, `-s` | Run without console output | `Injector.exe --silent` |
+| `--config <path>` | Use custom theme.json file (planned) | `Injector.exe --config mytheme.json` |
+| `--disable` | Disable active theme (planned) | `Injector.exe --disable` |
+
+**Usage Examples:**
+
+```cmd
+# Check if theme is currently active
+Injector.exe --status
+
+# Enable theme silently (no console window pauses)
+Injector.exe --silent
+
+# Show help and available options
+Injector.exe --help
+
+# Display version information
+Injector.exe --version
+```
+
+**Automation with Task Scheduler:**
+
+```cmd
+# Create scheduled task to auto-enable theme
+schtasks /create /tn "EventViewerTheme" /tr "C:\Program Files\EventViewerThemer\Injector.exe --silent" /sc onlogon /rl highest
+```
+
+**PowerShell Integration:**
+
+```powershell
+# Check theme status programmatically
+$output = & "C:\Program Files\EventViewerThemer\Injector.exe" --status
+if ($output -match "ACTIVE") {
+    Write-Host "Theme is running"
+} else {
+    Write-Host "Theme is not active"
+}
+```
+
 ---
 
 ## Customization
