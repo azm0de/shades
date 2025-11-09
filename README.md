@@ -49,7 +49,37 @@ Event Viewer Themer transforms Windows Event Viewer from its default bright them
 
 ### Installation
 
-1. **Download the latest release:**
+#### Option 1: Installer (Recommended)
+
+1. **Download the installer:**
+   - Visit [Releases](https://github.com/azm0de/shades/releases)
+   - Download `EventViewerThemer-Setup.exe` (312 KB)
+   - Verify checksum (optional but recommended):
+     ```powershell
+     Get-FileHash EventViewerThemer-Setup.exe -Algorithm SHA256
+     ```
+     Compare with SHA256 in `SHA256SUMS.txt`
+
+2. **Run the installer:**
+   - Double-click `EventViewerThemer-Setup.exe`
+   - Follow the installation wizard
+   - Choose installation directory (default: `C:\Program Files\EventViewerThemer`)
+   - Select shortcut options (Start Menu, Desktop)
+   - Click "Install"
+
+3. **Launch the application:**
+   - From Start Menu: `Event Viewer Themer`
+   - Or from Desktop shortcut (if created)
+   - Right-click and select "Run as administrator"
+
+4. **Open Event Viewer and enjoy your theme!**
+   ```
+   Press Win+R, type: eventvwr.msc
+   ```
+
+#### Option 2: Portable ZIP (No Installation)
+
+1. **Download the portable version:**
    - Visit [Releases](https://github.com/azm0de/shades/releases)
    - Download `EventViewerThemer.zip`
    - Extract to any folder (e.g., `C:\Tools\EventViewerThemer\`)
@@ -377,6 +407,17 @@ shades/
 - Open only one Event Viewer
 - Run injector
 - Future versions will support multiple instances
+
+### How to Uninstall
+
+**If installed via installer:**
+- Windows 10/11: Settings → Apps → Event Viewer Themer → Uninstall
+- Or: Start Menu → Event Viewer Themer → Uninstall
+- Or: Run `C:\Program Files\EventViewerThemer\Uninstall.exe`
+
+**If using portable ZIP:**
+- Simply delete the extracted folder
+- No registry entries or system files to clean up
 
 ---
 

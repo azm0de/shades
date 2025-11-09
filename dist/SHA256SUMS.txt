@@ -1,0 +1,8 @@
+SHA256 Checksums for Event Viewer Themer v1.0
+
+EventViewerThemer-Setup.exe:
+1F32BD239AFAFCF9E6ADDE10DE2E05F8612432329642636C0EEAB8367B3E8888
+
+To verify the installer integrity:
+PowerShell: Get-FileHash EventViewerThemer-Setup.exe -Algorithm SHA256
+Compare the output hash with the value above.
