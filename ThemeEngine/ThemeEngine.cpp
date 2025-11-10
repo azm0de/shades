@@ -2,14 +2,22 @@
 #include <uxtheme.h>
 #include <commctrl.h>
 #include <richedit.h>
+#include <prsht.h>
 #include <fstream>
 #include <string>
 #include <vector>
+#include <set>
 #include <cstdio>
 #include "detours.h"
 #include "../libs/json/json.hpp" // Include the JSON header
 
 using json = nlohmann::json;
+
+// --- Forward Declarations ---
+void ThemeRichEditControl(HWND hRichEdit);
+void ThemeEditControl(HWND hEdit);
+void ThemeStaticControl(HWND hStatic);
+BOOL CALLBACK EnumChildProcForAllControls(HWND hChild, LPARAM lParam);
 
 // --- Global Module Handle ---
 HMODULE g_hModule = NULL;
@@ -47,13 +55,28 @@ WNDPROC g_pOriginalListViewProc = NULL;
 HWND g_hListView = NULL;
 WNDPROC g_pOriginalTreeViewProc = NULL;
 HWND g_hTreeView = NULL;
+WNDPROC g_pOriginalTabControlProc = NULL;
+HWND g_hTabControl = NULL;
 HHOOK g_hCallWndProcHook = NULL;
+UINT_PTR g_ThemeTimerId = 0;
+std::set<HWND> g_ThemedControls; // Track which controls we've already themed
 const wchar_t* g_pMutexName = L"Global\\EventViewerThemeActive";
+
+// --- Parent Window Subclassing for ListView NM_CUSTOMDRAW ---
+struct SubclassedParent {
+    HWND hwnd;
+    WNDPROC originalProc;
+};
+std::vector<SubclassedParent> g_SubclassedParents;
 
 // --- Original Function Pointers ---
 static DWORD (WINAPI *TrueGetSysColor)(int nIndex) = GetSysColor;
 static HBRUSH (WINAPI *TrueGetSysColorBrush)(int nIndex) = GetSysColorBrush;
 static HRESULT (WINAPI *TrueDrawThemeBackground)(HTHEME hTheme, HDC hdc, int iPartId, int iStateId, const RECT *pRect, const RECT *pClipRect) = DrawThemeBackground;
+static HWND (WINAPI *TrueCreateWindowExW)(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam) = CreateWindowExW;
+static int (WINAPI *TrueDrawTextW)(HDC hdc, LPCWSTR lpchText, int cchText, LPRECT lprc, UINT format) = DrawTextW;
+static int (WINAPI *TrueDrawTextExW)(HDC hdc, LPWSTR lpchText, int cchText, LPRECT lprc, UINT format, LPDRAWTEXTPARAMS lpdtp) = DrawTextExW;
+static BOOL (WINAPI *TrueSetWindowTextW)(HWND hWnd, LPCWSTR lpString) = SetWindowTextW;
 
 // --- Helper Function to Convert Hex String to COLORREF ---
 COLORREF HexToCOLORREF(const std::string& hex) {
@@ -200,30 +223,111 @@ HRESULT WINAPI DetouredDrawThemeBackground(HTHEME hTheme, HDC hdc, int iPartId, 
     return TrueDrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect, pClipRect);
 }
 
+// --- Phase 3.1: DrawText hooks for text color ---
+int WINAPI DetouredDrawTextW(HDC hdc, LPCWSTR lpchText, int cchText, LPRECT lprc, UINT format) {
+    HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
+    if (hMutex == NULL) return TrueDrawTextW(hdc, lpchText, cchText, lprc, format);
+    CloseHandle(hMutex);
+
+    if (g_ThemeLoaded) {
+        SetTextColor(hdc, g_Theme.window_text);
+        SetBkColor(hdc, g_Theme.button_face);
+    }
+    return TrueDrawTextW(hdc, lpchText, cchText, lprc, format);
+}
+
+int WINAPI DetouredDrawTextExW(HDC hdc, LPWSTR lpchText, int cchText, LPRECT lprc, UINT format, LPDRAWTEXTPARAMS lpdtp) {
+    HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
+    if (hMutex == NULL) return TrueDrawTextExW(hdc, lpchText, cchText, lprc, format, lpdtp);
+    CloseHandle(hMutex);
+
+    if (g_ThemeLoaded) {
+        SetTextColor(hdc, g_Theme.window_text);
+        SetBkColor(hdc, g_Theme.button_face);
+    }
+    return TrueDrawTextExW(hdc, lpchText, cchText, lprc, format, lpdtp);
+}
+
+// --- Phase 4.1: CreateWindowExW hook for instant theming ---
+HWND WINAPI DetouredCreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName,
+                                     DWORD dwStyle, int X, int Y, int nWidth, int nHeight,
+                                     HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam) {
+    HWND hWnd = TrueCreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight,
+                                      hWndParent, hMenu, hInstance, lpParam);
+
+    if (hWnd && g_ThemeLoaded) {
+        HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
+        if (hMutex != NULL) {
+            CloseHandle(hMutex);
+
+            wchar_t className[256];
+            GetClassNameW(hWnd, className, 256);
+
+            // Theme RichEdit controls immediately
+            if (wcscmp(className, L"RichEdit20W") == 0 ||
+                wcscmp(className, L"RICHEDIT50W") == 0 ||
+                wcscmp(className, L"RichEdit") == 0) {
+                ThemeRichEditControl(hWnd);
+                g_ThemedControls.insert(hWnd);
+
+                char logMsg[256];
+                sprintf_s(logMsg, 256, "DetouredCreateWindowExW: Themed RichEdit at creation, HWND=%p", hWnd);
+                LogError(logMsg);
+            }
+            // Theme Edit controls immediately
+            else if (wcscmp(className, L"Edit") == 0) {
+                ThemeEditControl(hWnd);
+            }
+            // Theme Static controls immediately
+            else if (wcscmp(className, L"Static") == 0) {
+                ThemeStaticControl(hWnd);
+            }
+        }
+    }
+
+    return hWnd;
+}
+
+// --- Phase 4.2: SetWindowTextW hook to maintain theming ---
+BOOL WINAPI DetouredSetWindowTextW(HWND hWnd, LPCWSTR lpString) {
+    BOOL result = TrueSetWindowTextW(hWnd, lpString);
+
+    if (result && g_ThemeLoaded) {
+        HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
+        if (hMutex != NULL) {
+            CloseHandle(hMutex);
+
+            // Re-apply theme to this control after text change
+            InvalidateRect(hWnd, NULL, TRUE);
+
+            wchar_t className[256];
+            GetClassNameW(hWnd, className, 256);
+
+            if (wcscmp(className, L"RichEdit20W") == 0 ||
+                wcscmp(className, L"RICHEDIT50W") == 0) {
+                ThemeRichEditControl(hWnd);
+            }
+        }
+    }
+
+    return result;
+}
+
 // --- Custom ListView Procedure ---
 LRESULT CALLBACK CustomListViewProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
     if (hMutex == NULL) return CallWindowProc(g_pOriginalListViewProc, hWnd, uMsg, wParam, lParam);
     CloseHandle(hMutex);
 
-    if (g_ThemeLoaded && uMsg == WM_NOTIFY) {
-        LPNMHDR lpnmh = (LPNMHDR)lParam;
-        if (lpnmh->code == NM_CUSTOMDRAW) {
-            LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)lParam;
-            switch (lplvcd->nmcd.dwDrawStage) {
-                case CDDS_PREPAINT: return CDRF_NOTIFYITEMDRAW;
-                case CDDS_ITEMPREPAINT:
-                    if (lplvcd->nmcd.uItemState & CDIS_SELECTED) {
-                        lplvcd->clrText = g_Theme.highlight_text;
-                        lplvcd->clrTextBk = g_Theme.highlight_bg;
-                    } else {
-                        lplvcd->clrText = g_Theme.window_text;
-                        lplvcd->clrTextBk = g_Theme.window_bg;
-                    }
-                    return CDRF_DODEFAULT;
-            }
-        }
+    // Handle background erasing for ListView
+    if (g_ThemeLoaded && uMsg == WM_ERASEBKGND) {
+        HDC hdc = (HDC)wParam;
+        RECT rc;
+        GetClientRect(hWnd, &rc);
+        FillRect(hdc, &rc, g_Theme.h_window_bg_brush);
+        return 1;
     }
+
     return CallWindowProc(g_pOriginalListViewProc, hWnd, uMsg, wParam, lParam);
 }
 
@@ -301,12 +405,258 @@ BOOL CALLBACK EnumChildProcForRichEdit(HWND hChild, LPARAM lParam) {
     return TRUE;
 }
 
+// --- Helper to theme Edit controls ---
+void ThemeEditControl(HWND hEdit) {
+    if (!g_ThemeLoaded) return;
+    if (g_ThemedControls.find(hEdit) != g_ThemedControls.end()) return; // Already themed
+
+    InvalidateRect(hEdit, NULL, TRUE);
+    g_ThemedControls.insert(hEdit);
+
+    char logMsg[256];
+    sprintf_s(logMsg, 256, "ThemeEditControl: Applied theme to Edit HWND=%p", hEdit);
+    LogError(logMsg);
+}
+
+// --- Helper to theme Static controls ---
+void ThemeStaticControl(HWND hStatic) {
+    if (!g_ThemeLoaded) return;
+    if (g_ThemedControls.find(hStatic) != g_ThemedControls.end()) return; // Already themed
+
+    InvalidateRect(hStatic, NULL, TRUE);
+    g_ThemedControls.insert(hStatic);
+
+    char logMsg[256];
+    sprintf_s(logMsg, 256, "ThemeStaticControl: Applied theme to Static HWND=%p", hStatic);
+    LogError(logMsg);
+}
+
+// --- Callback to find and theme ALL control types ---
+BOOL CALLBACK EnumChildProcForAllControls(HWND hChild, LPARAM lParam) {
+    if (!g_ThemeLoaded) return TRUE;
+
+    wchar_t className[256];
+    GetClassNameW(hChild, className, 256);
+
+    // Theme RichEdit
+    if (wcscmp(className, L"RichEdit20W") == 0 ||
+        wcscmp(className, L"RICHEDIT50W") == 0 ||
+        wcscmp(className, L"RichEdit") == 0) {
+        if (g_ThemedControls.find(hChild) == g_ThemedControls.end()) {
+            ThemeRichEditControl(hChild);
+            g_ThemedControls.insert(hChild);
+        }
+    }
+
+    // Theme ListView controls
+    else if (wcscmp(className, L"SysListView32") == 0) {
+        if (g_ThemedControls.find(hChild) == g_ThemedControls.end()) {
+            // Set ListView background and text colors
+            SendMessageW(hChild, LVM_SETBKCOLOR, 0, (LPARAM)g_Theme.window_bg);
+            SendMessageW(hChild, LVM_SETTEXTBKCOLOR, 0, (LPARAM)g_Theme.window_bg);
+            SendMessageW(hChild, LVM_SETTEXTCOLOR, 0, (LPARAM)g_Theme.window_text);
+
+            // Force redraw
+            InvalidateRect(hChild, NULL, TRUE);
+
+            g_ThemedControls.insert(hChild);
+
+            char logMsg[256];
+            sprintf_s(logMsg, 256, "EnumChildProcForAllControls: Themed ListView HWND=%p", hChild);
+            LogError(logMsg);
+        }
+    }
+
+    // Theme Edit controls
+    else if (wcscmp(className, L"Edit") == 0) {
+        ThemeEditControl(hChild);
+    }
+
+    // Theme Static controls
+    else if (wcscmp(className, L"Static") == 0) {
+        ThemeStaticControl(hChild);
+    }
+
+    // Recurse into children
+    EnumChildWindows(hChild, EnumChildProcForAllControls, lParam);
+
+    return TRUE;
+}
+
+// --- Custom Tab Control Procedure (Phase 1.2) ---
+LRESULT CALLBACK CustomTabControlProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
+    if (hMutex == NULL) return CallWindowProc(g_pOriginalTabControlProc, hWnd, uMsg, wParam, lParam);
+    CloseHandle(hMutex);
+
+    if (g_ThemeLoaded) {
+        if (uMsg == WM_NOTIFY) {
+            LPNMHDR lpnmh = (LPNMHDR)lParam;
+            if (lpnmh->code == NM_CUSTOMDRAW) {
+                LPNMCUSTOMDRAW lpnmcd = (LPNMCUSTOMDRAW)lParam;
+                switch (lpnmcd->dwDrawStage) {
+                    case CDDS_PREPAINT:
+                        return CDRF_NOTIFYITEMDRAW;
+
+                    case CDDS_ITEMPREPAINT:
+                    {
+                        HDC hdc = lpnmcd->hdc;
+                        RECT rc = lpnmcd->rc;
+
+                        // Draw tab background
+                        if (lpnmcd->uItemState & CDIS_SELECTED) {
+                            FillRect(hdc, &rc, g_Theme.h_highlight_bg_brush);
+                            SetTextColor(hdc, g_Theme.highlight_text);
+                        } else {
+                            FillRect(hdc, &rc, g_Theme.h_button_face_brush);
+                            SetTextColor(hdc, g_Theme.button_text);
+                        }
+                        SetBkMode(hdc, TRANSPARENT);
+
+                        return CDRF_NEWFONT | CDRF_NOTIFYPOSTPAINT;
+                    }
+                }
+            }
+        }
+
+        if (uMsg == WM_ERASEBKGND) {
+            HDC hdc = (HDC)wParam;
+            RECT rc;
+            GetClientRect(hWnd, &rc);
+            FillRect(hdc, &rc, g_Theme.h_button_face_brush);
+            return 1;
+        }
+    }
+
+    return CallWindowProc(g_pOriginalTabControlProc, hWnd, uMsg, wParam, lParam);
+}
+
+// --- Custom Parent Window Procedure for ListView NM_CUSTOMDRAW ---
+LRESULT CALLBACK CustomParentProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
+    if (hMutex == NULL) {
+        // Find and call original proc
+        for (const auto& parent : g_SubclassedParents) {
+            if (parent.hwnd == hWnd) {
+                return CallWindowProc(parent.originalProc, hWnd, uMsg, wParam, lParam);
+            }
+        }
+        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    }
+    CloseHandle(hMutex);
+
+    if (g_ThemeLoaded && uMsg == WM_NOTIFY) {
+        LPNMHDR pnmh = (LPNMHDR)lParam;
+
+        if (pnmh->code == NM_CUSTOMDRAW) {
+            wchar_t className[256];
+            GetClassNameW(pnmh->hwndFrom, className, 256);
+
+            // Handle ListView custom draw
+            if (wcscmp(className, L"SysListView32") == 0) {
+                LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)lParam;
+
+                switch (lplvcd->nmcd.dwDrawStage) {
+                    case CDDS_PREPAINT:
+                        // Request item-level notifications
+                        return CDRF_NOTIFYITEMDRAW;
+
+                    case CDDS_ITEMPREPAINT:
+                        // Set colors for each item
+                        if (lplvcd->nmcd.uItemState & CDIS_SELECTED) {
+                            lplvcd->clrText = g_Theme.highlight_text;
+                            lplvcd->clrTextBk = g_Theme.highlight_bg;
+                        } else {
+                            lplvcd->clrText = g_Theme.window_text;
+                            lplvcd->clrTextBk = g_Theme.window_bg;
+                        }
+                        return CDRF_NEWFONT;
+                }
+            }
+        }
+    }
+
+    // Find and call original proc
+    for (const auto& parent : g_SubclassedParents) {
+        if (parent.hwnd == hWnd) {
+            return CallWindowProc(parent.originalProc, hWnd, uMsg, wParam, lParam);
+        }
+    }
+    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+}
+
+// --- Timer callback for periodic re-theming (Phase 2.1) ---
+void CALLBACK ThemeTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+    if (!g_ThemeLoaded) return;
+
+    HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
+    if (hEventViewer) {
+        EnumChildWindows(hEventViewer, EnumChildProcForAllControls, 0);
+    }
+}
+
 // --- Hook procedure for dialog theming ---
 LRESULT CALLBACK CallWndProcHook(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0 && g_ThemeLoaded) {
         CWPSTRUCT* pCwp = (CWPSTRUCT*)lParam;
 
         switch (pCwp->message) {
+            // Phase 1.1: Dialog background erasing
+            case WM_ERASEBKGND:
+            {
+                wchar_t className[256];
+                GetClassNameW(pCwp->hwnd, className, 256);
+
+                // Theme dialog backgrounds
+                if (wcsstr(className, L"#32770") ||  // Standard dialog class
+                    wcsstr(className, L"Dialog") ||
+                    wcsstr(className, L"PropertyPage") ||
+                    wcsstr(className, L"SysTabControl32")) {
+                    HDC hdc = (HDC)pCwp->wParam;
+                    RECT rc;
+                    GetClientRect(pCwp->hwnd, &rc);
+                    FillRect(hdc, &rc, g_Theme.h_button_face_brush);
+
+                    char logMsg[256];
+                    sprintf_s(logMsg, 256, "CallWndProcHook: WM_ERASEBKGND themed for class: %S", className);
+                    LogError(logMsg);
+
+                    return 1; // Prevent default erase
+                }
+                break;
+            }
+
+            // Phase 1.3: Dynamic control creation
+            case WM_CREATE:
+            {
+                LogError("CallWndProcHook: WM_CREATE detected, theming new window children...");
+                EnumChildWindows(pCwp->hwnd, EnumChildProcForAllControls, 0);
+                break;
+            }
+
+            case WM_SHOWWINDOW:
+            {
+                if (pCwp->wParam) { // Only care about showing
+                    LogError("CallWndProcHook: WM_SHOWWINDOW detected, theming window children...");
+                    EnumChildWindows(pCwp->hwnd, EnumChildProcForAllControls, 0);
+                }
+                break;
+            }
+
+            // Phase 2.2: Property sheet page changes
+            case WM_NOTIFY:
+            {
+                LPNMHDR pnmh = (LPNMHDR)pCwp->lParam;
+
+                // Property sheet page changing
+                if (pnmh->code == PSN_SETACTIVE) {
+                    LogError("CallWndProcHook: PSN_SETACTIVE - Property page becoming active, re-theming...");
+                    EnumChildWindows(pnmh->hwndFrom, EnumChildProcForAllControls, 0);
+                }
+                break;
+            }
+
+            // WM_CTLCOLOR* message handling
             case WM_CTLCOLORDLG:
             {
                 HDC hdc = (HDC)pCwp->wParam;
@@ -339,10 +689,50 @@ LRESULT CALLBACK CallWndProcHook(int nCode, WPARAM wParam, LPARAM lParam) {
                 return (LRESULT)g_Theme.h_button_face_brush;
             }
 
+            // Phase 2.3: Additional WM_CTLCOLOR* messages
+            case WM_CTLCOLORLISTBOX:
+            case WM_CTLCOLORSCROLLBAR:
+            {
+                HDC hdc = (HDC)pCwp->wParam;
+                SetBkColor(hdc, g_Theme.window_bg);
+                SetTextColor(hdc, g_Theme.window_text);
+                return (LRESULT)g_Theme.h_window_bg_brush;
+            }
+
             case WM_INITDIALOG:
             {
                 LogError("CallWndProcHook: WM_INITDIALOG detected, theming dialog children...");
-                EnumChildWindows(pCwp->hwnd, EnumChildProcForRichEdit, 0);
+                EnumChildWindows(pCwp->hwnd, EnumChildProcForAllControls, 0);
+                break;
+            }
+
+            // Phase 3.2: Owner-drawn controls
+            case WM_PAINT:
+            {
+                wchar_t className[256];
+                GetClassNameW(pCwp->hwnd, className, 256);
+
+                // Custom paint for static controls
+                if (wcscmp(className, L"Static") == 0) {
+                    PAINTSTRUCT ps;
+                    HDC hdc = BeginPaint(pCwp->hwnd, &ps);
+                    if (hdc) {
+                        SetBkColor(hdc, g_Theme.button_face);
+                        SetTextColor(hdc, g_Theme.window_text);
+
+                        // Get text and draw it
+                        wchar_t text[256];
+                        GetWindowTextW(pCwp->hwnd, text, 256);
+
+                        RECT rc;
+                        GetClientRect(pCwp->hwnd, &rc);
+                        FillRect(hdc, &rc, g_Theme.h_button_face_brush);
+                        DrawTextW(hdc, text, -1, &rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+                        EndPaint(pCwp->hwnd, &ps);
+                        return 0;
+                    }
+                }
                 break;
             }
         }
@@ -374,6 +764,44 @@ HWND FindEventListView(HWND hParent) {
     return FindControlByClass(hParent, L"SysListView32");
 }
 
+// --- Callback to find and subclass parent windows containing ListViews ---
+BOOL CALLBACK FindAndSubclassParents(HWND hChild, LPARAM lParam) {
+    wchar_t className[256];
+    GetClassNameW(hChild, className, 256);
+
+    if (wcscmp(className, L"SysListView32") == 0) {
+        HWND hParent = GetParent(hChild);
+        if (hParent) {
+            // Check if this parent is already subclassed
+            bool alreadySubclassed = false;
+            for (const auto& parent : g_SubclassedParents) {
+                if (parent.hwnd == hParent) {
+                    alreadySubclassed = true;
+                    break;
+                }
+            }
+
+            if (!alreadySubclassed) {
+                SubclassedParent sp;
+                sp.hwnd = hParent;
+                sp.originalProc = (WNDPROC)SetWindowLongPtr(hParent, GWLP_WNDPROC, (LONG_PTR)CustomParentProc);
+
+                if (sp.originalProc) {
+                    g_SubclassedParents.push_back(sp);
+
+                    char logMsg[256];
+                    sprintf_s(logMsg, 256, "FindAndSubclassParents: Subclassed parent HWND=%p for ListView HWND=%p", hParent, hChild);
+                    LogError(logMsg);
+                }
+            }
+        }
+    }
+
+    // Recurse into children
+    EnumChildWindows(hChild, FindAndSubclassParents, lParam);
+    return TRUE;
+}
+
 // --- Initialization and Deinitialization ---
 void InitializeTheme() {
     LogError("InitializeTheme: Starting initialization...");
@@ -390,6 +818,12 @@ void InitializeTheme() {
     DetourAttach((PVOID*)&TrueGetSysColor, (PVOID)DetouredGetSysColor);
     DetourAttach((PVOID*)&TrueGetSysColorBrush, (PVOID)DetouredGetSysColorBrush);
     DetourAttach((PVOID*)&TrueDrawThemeBackground, (PVOID)DetouredDrawThemeBackground);
+    // Phase 3.1: DrawText hooks
+    DetourAttach((PVOID*)&TrueDrawTextW, (PVOID)DetouredDrawTextW);
+    DetourAttach((PVOID*)&TrueDrawTextExW, (PVOID)DetouredDrawTextExW);
+    // Phase 4: Window creation hooks
+    DetourAttach((PVOID*)&TrueCreateWindowExW, (PVOID)DetouredCreateWindowExW);
+    DetourAttach((PVOID*)&TrueSetWindowTextW, (PVOID)DetouredSetWindowTextW);
 
     LONG error = DetourTransactionCommit();
     if (error != NO_ERROR) {
@@ -399,7 +833,7 @@ void InitializeTheme() {
         return;
     }
 
-    LogError("InitializeTheme: Detours hooks installed successfully!");
+    LogError("InitializeTheme: All Detours hooks installed successfully!");
 
     // Install WH_CALLWNDPROC hook for dialog theming
     g_hCallWndProcHook = SetWindowsHookEx(WH_CALLWNDPROC, CallWndProcHook, g_hModule, GetCurrentThreadId());
@@ -407,6 +841,14 @@ void InitializeTheme() {
         LogError("InitializeTheme: WH_CALLWNDPROC hook installed successfully!");
     } else {
         LogError("InitializeTheme: Failed to install WH_CALLWNDPROC hook");
+    }
+
+    // Phase 2.1: Start periodic re-theming timer (500ms interval)
+    g_ThemeTimerId = SetTimer(NULL, 0, 500, ThemeTimerProc);
+    if (g_ThemeTimerId) {
+        LogError("InitializeTheme: Periodic re-theming timer started (500ms)");
+    } else {
+        LogError("InitializeTheme: Failed to start re-theming timer");
     }
 
     HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
@@ -431,9 +873,26 @@ void InitializeTheme() {
             LogError("InitializeTheme: TreeView not found");
         }
 
-        // Theme all existing RichEdit controls
-        LogError("InitializeTheme: Searching for RichEdit controls...");
-        EnumChildWindows(hEventViewer, EnumChildProcForRichEdit, 0);
+        // Phase 1.2: Subclass Tab Control
+        g_hTabControl = FindControlByClass(hEventViewer, L"SysTabControl32");
+        if (g_hTabControl) {
+            g_pOriginalTabControlProc = (WNDPROC)SetWindowLongPtr(g_hTabControl, GWLP_WNDPROC, (LONG_PTR)CustomTabControlProc);
+            LogError("InitializeTheme: Tab Control subclassed successfully");
+        } else {
+            LogError("InitializeTheme: Tab Control not found");
+        }
+
+        // Find and subclass all parent windows containing ListViews
+        LogError("InitializeTheme: Finding and subclassing parent windows with ListViews...");
+        EnumChildWindows(hEventViewer, FindAndSubclassParents, 0);
+
+        char parentCountMsg[256];
+        sprintf_s(parentCountMsg, 256, "InitializeTheme: Subclassed %zu parent windows", g_SubclassedParents.size());
+        LogError(parentCountMsg);
+
+        // Theme all existing controls
+        LogError("InitializeTheme: Theming all existing controls...");
+        EnumChildWindows(hEventViewer, EnumChildProcForAllControls, 0);
 
     } else {
         LogError("InitializeTheme: Event Viewer window not found");
@@ -443,20 +902,51 @@ void InitializeTheme() {
 }
 
 void DeinitializeTheme() {
+    LogError("DeinitializeTheme: Starting cleanup...");
+
+    // Kill timer
+    if (g_ThemeTimerId) {
+        KillTimer(NULL, g_ThemeTimerId);
+        g_ThemeTimerId = 0;
+        LogError("DeinitializeTheme: Timer killed");
+    }
+
     // Unhook CallWndProc
     if (g_hCallWndProcHook) {
         UnhookWindowsHookEx(g_hCallWndProcHook);
         g_hCallWndProcHook = NULL;
+        LogError("DeinitializeTheme: CallWndProc hook removed");
+    }
+
+    // Restore all subclassed parent windows
+    for (const auto& parent : g_SubclassedParents) {
+        if (parent.originalProc && parent.hwnd) {
+            SetWindowLongPtr(parent.hwnd, GWLP_WNDPROC, (LONG_PTR)parent.originalProc);
+        }
+    }
+    if (!g_SubclassedParents.empty()) {
+        char msg[256];
+        sprintf_s(msg, 256, "DeinitializeTheme: Restored %zu parent window subclasses", g_SubclassedParents.size());
+        LogError(msg);
+        g_SubclassedParents.clear();
     }
 
     // Restore ListView subclass
     if (g_pOriginalListViewProc && g_hListView) {
         SetWindowLongPtr(g_hListView, GWLP_WNDPROC, (LONG_PTR)g_pOriginalListViewProc);
+        LogError("DeinitializeTheme: ListView subclass restored");
     }
 
     // Restore TreeView subclass
     if (g_pOriginalTreeViewProc && g_hTreeView) {
         SetWindowLongPtr(g_hTreeView, GWLP_WNDPROC, (LONG_PTR)g_pOriginalTreeViewProc);
+        LogError("DeinitializeTheme: TreeView subclass restored");
+    }
+
+    // Restore Tab Control subclass
+    if (g_pOriginalTabControlProc && g_hTabControl) {
+        SetWindowLongPtr(g_hTabControl, GWLP_WNDPROC, (LONG_PTR)g_pOriginalTabControlProc);
+        LogError("DeinitializeTheme: Tab Control subclass restored");
     }
 
     // Detach Detours hooks
@@ -465,7 +955,12 @@ void DeinitializeTheme() {
     DetourDetach((PVOID*)&TrueGetSysColor, (PVOID)DetouredGetSysColor);
     DetourDetach((PVOID*)&TrueGetSysColorBrush, (PVOID)DetouredGetSysColorBrush);
     DetourDetach((PVOID*)&TrueDrawThemeBackground, (PVOID)DetouredDrawThemeBackground);
+    DetourDetach((PVOID*)&TrueDrawTextW, (PVOID)DetouredDrawTextW);
+    DetourDetach((PVOID*)&TrueDrawTextExW, (PVOID)DetouredDrawTextExW);
+    DetourDetach((PVOID*)&TrueCreateWindowExW, (PVOID)DetouredCreateWindowExW);
+    DetourDetach((PVOID*)&TrueSetWindowTextW, (PVOID)DetouredSetWindowTextW);
     DetourTransactionCommit();
+    LogError("DeinitializeTheme: All Detours hooks detached");
 
     // Clean up brushes
     if (g_ThemeLoaded) {
@@ -473,7 +968,13 @@ void DeinitializeTheme() {
         DeleteObject(g_Theme.h_header_bg_brush);
         DeleteObject(g_Theme.h_button_face_brush);
         DeleteObject(g_Theme.h_highlight_bg_brush);
+        LogError("DeinitializeTheme: Brushes deleted");
     }
+
+    // Clear themed controls set
+    g_ThemedControls.clear();
+
+    LogError("DeinitializeTheme: Cleanup complete");
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
