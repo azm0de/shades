@@ -88,7 +88,7 @@ Section "Core Files (Required)" SecCore
   SetOutPath "$INSTDIR"
 
   ; Install main application files
-  File "dist\EventViewerThemer\Injector.exe"
+  File "dist\EventViewerThemer\SHADES.exe"
   File "dist\EventViewerThemer\ThemeEngine.dll"
   File "dist\EventViewerThemer\theme.json"
   File "dist\EventViewerThemer\README.txt"
@@ -103,7 +103,7 @@ Section "Core Files (Required)" SecCore
   ; Write uninstaller registry keys
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\Uninstall.exe"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\Injector.exe"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\SHADES.exe"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
@@ -120,7 +120,7 @@ Section "Start Menu Shortcuts" SecStartMenu
   CreateDirectory "$SMPROGRAMS\Event Viewer Themer"
 
   ; Create shortcuts (Note: User will need to right-click and "Run as administrator")
-  CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Event Viewer Themer.lnk" "$INSTDIR\Injector.exe" "" "$INSTDIR\Injector.exe" 0
+  CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Event Viewer Themer.lnk" "$INSTDIR\SHADES.exe" "" "$INSTDIR\SHADES.exe" 0
   CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Configure Theme.lnk" "notepad.exe" '"$INSTDIR\theme.json"'
   CreateShortcut "$SMPROGRAMS\Event Viewer Themer\README.lnk" "$INSTDIR\README.txt"
   CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
@@ -129,7 +129,7 @@ SectionEnd
 
 Section "Desktop Shortcut" SecDesktop
   ; Create desktop shortcut
-  CreateShortcut "$DESKTOP\Event Viewer Themer.lnk" "$INSTDIR\Injector.exe" "" "$INSTDIR\Injector.exe" 0
+  CreateShortcut "$DESKTOP\Event Viewer Themer.lnk" "$INSTDIR\SHADES.exe" "" "$INSTDIR\SHADES.exe" 0
 SectionEnd
 
 ;--------------------------------
@@ -157,7 +157,7 @@ Section "Uninstall"
   Delete "$DESKTOP\Event Viewer Themer.lnk"
 
   ; Remove application files
-  Delete "$INSTDIR\Injector.exe"
+  Delete "$INSTDIR\SHADES.exe"
   Delete "$INSTDIR\ThemeEngine.dll"
   Delete "$INSTDIR\theme.json"
   Delete "$INSTDIR\README.txt"

@@ -6,8 +6,8 @@
 #include <cstring>
 
 // Version information
-#define APP_VERSION "1.1.0"
-#define APP_NAME "Event Viewer Themer"
+#define APP_VERSION "1.2.0"
+#define APP_NAME "SHADES - Event Viewer Themer"
 
 // Global flags
 bool g_silent = false;
@@ -30,9 +30,9 @@ void PrintError(const std::string& message) {
 // Function to display help message
 void ShowHelp() {
     std::cout << APP_NAME << " v" << APP_VERSION << "\n";
-    std::cout << "A utility to apply dark themes to Windows Event Viewer\n\n";
+    std::cout << "A utility to apply custom themes to Windows Event Viewer\n\n";
     std::cout << "Usage:\n";
-    std::cout << "  Injector.exe [options]\n\n";
+    std::cout << "  SHADES.exe [options]\n\n";
     std::cout << "Options:\n";
     std::cout << "  --help              Display this help message\n";
     std::cout << "  --version           Display version information\n";
@@ -41,10 +41,10 @@ void ShowHelp() {
     std::cout << "  --silent            Run without console output\n";
     std::cout << "  --disable           Disable theme (close mutex, not yet implemented)\n\n";
     std::cout << "Examples:\n";
-    std::cout << "  Injector.exe                    # Enable theme with default settings\n";
-    std::cout << "  Injector.exe --status           # Check if theme is active\n";
-    std::cout << "  Injector.exe --silent           # Enable theme without console output\n";
-    std::cout << "  Injector.exe --help             # Show this help message\n\n";
+    std::cout << "  SHADES.exe                      # Enable theme with default settings\n";
+    std::cout << "  SHADES.exe --status             # Check if theme is active\n";
+    std::cout << "  SHADES.exe --silent             # Enable theme without console output\n";
+    std::cout << "  SHADES.exe --help               # Show this help message\n\n";
     std::cout << "Notes:\n";
     std::cout << "  - Event Viewer must be running before launching the injector\n";
     std::cout << "  - Requires Administrator privileges for DLL injection\n";

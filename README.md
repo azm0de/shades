@@ -25,7 +25,7 @@ Event Viewer Themer transforms Windows Event Viewer from its default bright them
 ## Features
 
 ### For End Users
-- **Easy to Use**: Just run `Injector.exe` and the theme applies instantly
+- **Easy to Use**: Just run `SHADES.exe` and the theme applies instantly
 - **Customizable Colors**: Edit `theme.json` to create your perfect color scheme
 - **No Installation Required**: Standalone executable, no dependencies
 - **Reversible**: Close the injector to restore original appearance
@@ -90,7 +90,7 @@ Event Viewer Themer transforms Windows Event Viewer from its default bright them
    ```
 
 3. **Apply the theme:**
-   - Right-click `Injector.exe`
+   - Right-click `SHADES.exe`
    - Select "Run as administrator"
    - Keep the window open to maintain the theme
 
@@ -100,15 +100,15 @@ Event Viewer Themer transforms Windows Event Viewer from its default bright them
 
 **Enable Theme:**
 - Open Event Viewer first
-- Run Injector.exe as Administrator
+- Run SHADES.exe as Administrator
 - Theme applies immediately
 
 **Disable Theme:**
-- Simply close the Injector.exe window
+- Simply close the SHADES.exe window
 - Event Viewer returns to original appearance
 
 **Keep Theme Active:**
-- Leave Injector.exe running while using Event Viewer
+- Leave SHADES.exe running while using Event Viewer
 - You can minimize the window to the taskbar
 
 ### Command-Line Arguments (v1.1+)
@@ -116,48 +116,48 @@ Event Viewer Themer transforms Windows Event Viewer from its default bright them
 The injector supports several command-line arguments for automation and scripting:
 
 ```cmd
-Injector.exe [options]
+SHADES.exe [options]
 ```
 
 **Available Options:**
 
 | Argument | Description | Example |
 |----------|-------------|---------|
-| `--help`, `-h`, `/?` | Display help message with all options | `Injector.exe --help` |
-| `--version`, `-v` | Display version information | `Injector.exe --version` |
-| `--status` | Check if theme is currently active | `Injector.exe --status` |
-| `--silent`, `-s` | Run without console output | `Injector.exe --silent` |
-| `--config <path>` | Use custom theme.json file (planned) | `Injector.exe --config mytheme.json` |
-| `--disable` | Disable active theme (planned) | `Injector.exe --disable` |
+| `--help`, `-h`, `/?` | Display help message with all options | `SHADES.exe --help` |
+| `--version`, `-v` | Display version information | `SHADES.exe --version` |
+| `--status` | Check if theme is currently active | `SHADES.exe --status` |
+| `--silent`, `-s` | Run without console output | `SHADES.exe --silent` |
+| `--config <path>` | Use custom theme.json file (planned) | `SHADES.exe --config mytheme.json` |
+| `--disable` | Disable active theme (planned) | `SHADES.exe --disable` |
 
 **Usage Examples:**
 
 ```cmd
 # Check if theme is currently active
-Injector.exe --status
+SHADES.exe --status
 
 # Enable theme silently (no console window pauses)
-Injector.exe --silent
+SHADES.exe --silent
 
 # Show help and available options
-Injector.exe --help
+SHADES.exe --help
 
 # Display version information
-Injector.exe --version
+SHADES.exe --version
 ```
 
 **Automation with Task Scheduler:**
 
 ```cmd
 # Create scheduled task to auto-enable theme
-schtasks /create /tn "EventViewerTheme" /tr "C:\Program Files\EventViewerThemer\Injector.exe --silent" /sc onlogon /rl highest
+schtasks /create /tn "EventViewerTheme" /tr "C:\Program Files\EventViewerThemer\SHADES.exe --silent" /sc onlogon /rl highest
 ```
 
 **PowerShell Integration:**
 
 ```powershell
 # Check theme status programmatically
-$output = & "C:\Program Files\EventViewerThemer\Injector.exe" --status
+$output = & "C:\Program Files\EventViewerThemer\SHADES.exe" --status
 if ($output -match "ACTIVE") {
     Write-Host "Theme is running"
 } else {
@@ -234,7 +234,7 @@ The theme colors are defined in `theme.json`:
 }
 ```
 
-After editing `theme.json`, restart Injector.exe to apply changes.
+After editing `theme.json`, restart SHADES.exe to apply changes.
 
 ---
 
@@ -261,7 +261,7 @@ The core theming engine that modifies UI behavior through Windows API hooking:
 - Parses hex color codes (#1E1E1E) to Windows COLORREF format
 - Stores colors in global configuration struct
 
-### Component 2: Injector.exe (DLL Loader)
+### Component 2: SHADES.exe (DLL Loader)
 
 The user-facing application that injects ThemeEngine.dll into Event Viewer:
 
@@ -325,7 +325,7 @@ cmake ..
 cmake --build . --config Release
 cd ../..
 
-# Build Injector.exe
+# Build SHADES.exe
 cd Injector
 mkdir build && cd build
 cmake ..
@@ -334,7 +334,7 @@ cd ../..
 
 # Binaries will be in:
 # - ThemeEngine/build/Release/ThemeEngine.dll
-# - Injector/build/Release/Injector.exe
+# - Injector/build/Release/SHADES.exe
 ```
 
 #### Option 2: Linux Cross-Compilation with MinGW
@@ -353,7 +353,7 @@ cmake -DCMAKE_TOOLCHAIN_FILE=mingw-w64-toolchain.cmake \
       -DCMAKE_BUILD_TYPE=Release
 cmake --build ThemeEngine/build
 
-# Build Injector.exe
+# Build SHADES.exe
 cmake -DCMAKE_TOOLCHAIN_FILE=mingw-w64-toolchain.cmake \
       -S Injector -B Injector/build \
       -DCMAKE_BUILD_TYPE=Release
@@ -361,7 +361,7 @@ cmake --build Injector/build
 
 # Binaries will be in:
 # - ThemeEngine/build/ThemeEngine.dll
-# - Injector/build/Injector.exe
+# - Injector/build/SHADES.exe
 ```
 
 ### Project Structure
@@ -404,14 +404,14 @@ shades/
 3. **Test your changes:**
    - Copy new binaries to test directory
    - Run Event Viewer
-   - Run Injector.exe as Administrator
+   - Run SHADES.exe as Administrator
    - Verify theme applies correctly
 
 4. **Debug with Visual Studio Code:**
    - Install C/C++ extension
    - Configure launch.json for debugging
    - Attach to `mmc.exe` process for ThemeEngine debugging
-   - Debug Injector.exe directly for injection logic
+   - Debug SHADES.exe directly for injection logic
 
 ---
 
@@ -423,14 +423,14 @@ shades/
 
 **Solution:**
 - Make sure Event Viewer (eventvwr.msc) is open before running injector
-- Right-click Injector.exe and select "Run as administrator"
+- Right-click SHADES.exe and select "Run as administrator"
 
 ### Theme Not Applying
 
 **Cause:** theme.json file is missing or malformed
 
 **Solution:**
-- Verify `theme.json` exists in the same directory as `Injector.exe`
+- Verify `theme.json` exists in the same directory as `SHADES.exe`
 - Check JSON syntax with a validator (https://jsonlint.com)
 - Restore default theme.json from the distribution package
 
@@ -443,7 +443,7 @@ shades/
 - Do NOT use 3-digit shorthand or RGB() format
 - Use uppercase or lowercase hex digits (both work)
 
-### Antivirus Blocking Injector.exe
+### Antivirus Blocking SHADES.exe
 
 **Cause:** DLL injection techniques trigger heuristic detection
 

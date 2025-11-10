@@ -24,7 +24,7 @@ Release/
 
 # Exception: Distribution files
 !dist/EventViewerThemer-Setup.exe
-!dist/EventViewerThemer/*.exe
+!dist/EventViewerThemer/SHADES.exe
 !dist/EventViewerThemer/*.dll
 !dist/*.zip
 
