@@ -35,6 +35,8 @@ struct ThemeColors {
     COLORREF header_bg;
     HBRUSH h_window_bg_brush;
     HBRUSH h_header_bg_brush;
+    HBRUSH h_button_face_brush;
+    HBRUSH h_highlight_bg_brush;
 };
 ThemeColors g_Theme;
 bool g_ThemeLoaded = false;
@@ -99,6 +101,8 @@ void LoadTheme() {
 
         g_Theme.h_window_bg_brush = CreateSolidBrush(g_Theme.window_bg);
         g_Theme.h_header_bg_brush = CreateSolidBrush(g_Theme.header_bg);
+        g_Theme.h_button_face_brush = CreateSolidBrush(g_Theme.button_face);
+        g_Theme.h_highlight_bg_brush = CreateSolidBrush(g_Theme.highlight_bg);
         g_ThemeLoaded = true;
 
         LogError("LoadTheme: Theme loaded and parsed successfully!");
@@ -118,12 +122,41 @@ DWORD WINAPI DetouredGetSysColor(int nIndex) {
     if (!g_ThemeLoaded) return TrueGetSysColor(nIndex);
 
     switch (nIndex) {
+        // Main window colors
         case COLOR_WINDOW: return g_Theme.window_bg;
         case COLOR_WINDOWTEXT: return g_Theme.window_text;
         case COLOR_HIGHLIGHT: return g_Theme.highlight_bg;
         case COLOR_HIGHLIGHTTEXT: return g_Theme.highlight_text;
-        case COLOR_BTNFACE: return g_Theme.button_face;
+
+        // Button and dialog colors (COLOR_3DFACE == COLOR_BTNFACE, so only use one)
+        case COLOR_BTNFACE: // Also covers COLOR_3DFACE (same value)
+            return g_Theme.button_face;
         case COLOR_BTNTEXT: return g_Theme.button_text;
+        case COLOR_3DSHADOW: return RGB(0x1A, 0x11, 0x45); // Darker purple shadow
+        case COLOR_BTNHIGHLIGHT: // Also covers COLOR_3DHIGHLIGHT, COLOR_3DHILIGHT, COLOR_BTNHILIGHT
+            return RGB(0x50, 0x35, 0x90); // Lighter purple highlight
+        case COLOR_3DDKSHADOW: return RGB(0x00, 0x00, 0x00); // Black
+        case COLOR_3DLIGHT: return RGB(0x40, 0x2A, 0x75); // Medium purple
+
+        // Menu colors
+        case COLOR_MENU: return g_Theme.window_bg;
+        case COLOR_MENUTEXT: return g_Theme.window_text;
+        case COLOR_MENUBAR: return g_Theme.header_bg;
+        case COLOR_MENUHILIGHT: return g_Theme.highlight_bg;
+
+        // Additional UI element colors
+        case COLOR_GRAYTEXT: return RGB(0x60, 0xFF, 0x60); // Dim green for disabled
+        case COLOR_INFOBK: return RGB(0x2A, 0x1A, 0x60); // Dark purple tooltip
+        case COLOR_INFOTEXT: return g_Theme.window_text;
+        case COLOR_HOTLIGHT: return RGB(0x00, 0xFF, 0x00); // Bright green for hyperlinks
+        case COLOR_SCROLLBAR: return g_Theme.window_bg;
+        case COLOR_APPWORKSPACE: return g_Theme.window_bg;
+        case COLOR_GRADIENTACTIVECAPTION: return g_Theme.highlight_bg;
+        case COLOR_GRADIENTINACTIVECAPTION: return g_Theme.button_face;
+        case COLOR_ACTIVECAPTION: return g_Theme.highlight_bg;
+        case COLOR_INACTIVECAPTION: return g_Theme.button_face;
+        case COLOR_CAPTIONTEXT: return g_Theme.window_text;
+        case COLOR_INACTIVECAPTIONTEXT: return RGB(0x80, 0xFF, 0x80); // Dim green
     }
     return TrueGetSysColor(nIndex);
 }
@@ -135,7 +168,18 @@ HBRUSH WINAPI DetouredGetSysColorBrush(int nIndex) {
 
     if (!g_ThemeLoaded) return TrueGetSysColorBrush(nIndex);
 
-    if (nIndex == COLOR_WINDOW) return g_Theme.h_window_bg_brush;
+    switch (nIndex) {
+        case COLOR_WINDOW:
+        case COLOR_APPWORKSPACE:
+        case COLOR_SCROLLBAR:
+        case COLOR_MENU:
+        case COLOR_MENUBAR:
+            return g_Theme.h_window_bg_brush;
+        case COLOR_BTNFACE: // Also COLOR_3DFACE (same value)
+            return g_Theme.h_button_face_brush;
+        case COLOR_HIGHLIGHT:
+            return g_Theme.h_highlight_bg_brush;
+    }
 
     return TrueGetSysColorBrush(nIndex);
 }
@@ -255,6 +299,8 @@ void DeinitializeTheme() {
     if (g_ThemeLoaded) {
         DeleteObject(g_Theme.h_window_bg_brush);
         DeleteObject(g_Theme.h_header_bg_brush);
+        DeleteObject(g_Theme.h_button_face_brush);
+        DeleteObject(g_Theme.h_highlight_bg_brush);
     }
 }
 
