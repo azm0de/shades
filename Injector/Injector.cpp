@@ -293,6 +293,25 @@ int main(int argc, char* argv[]) {
     Print("Injection successful. Waiting for remote thread to finish...");
     WaitForSingleObject(hRemoteThread, INFINITE);
 
+    // Check if DLL was actually loaded
+    DWORD exitCode = 0;
+    GetExitCodeThread(hRemoteThread, &exitCode);
+    if (exitCode == 0) {
+        PrintError("Error: DLL injection failed - LoadLibraryA returned NULL");
+        PrintError("The DLL may not be in the correct location or failed to initialize");
+        PrintError("Check C:\\ThemeEngine_debug.log for details");
+        CloseHandle(hRemoteThread);
+        VirtualFreeEx(hProcess, pRemoteMem, 0, MEM_RELEASE);
+        CloseHandle(hProcess);
+        ReleaseMutex(hMutex);
+        CloseHandle(hMutex);
+        return 1;
+    }
+
+    char successMsg[256];
+    sprintf_s(successMsg, 256, "DLL loaded successfully. Module handle: 0x%lX", exitCode);
+    Print(successMsg);
+
     // 8. Clean up handles
     Print("Cleaning up handles.");
     CloseHandle(hRemoteThread);
@@ -300,6 +319,7 @@ int main(int argc, char* argv[]) {
     CloseHandle(hProcess);
 
     Print("Process complete. Theme is active.");
+    Print("Check C:\\ThemeEngine_debug.log for detailed initialization status");
 
     // Force Event Viewer window to refresh
     HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");

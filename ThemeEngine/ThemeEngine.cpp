@@ -4,10 +4,25 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cstdio>
 #include "detours.h"
 #include "../libs/json/json.hpp" // Include the JSON header
 
 using json = nlohmann::json;
+
+// --- Global Module Handle ---
+HMODULE g_hModule = NULL;
+
+// --- Debug Logging Function ---
+void LogError(const char* message) {
+    FILE* log = fopen("C:\\ThemeEngine_debug.log", "a");
+    if (log) {
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        fprintf(log, "[%02d:%02d:%02d] %s\n", st.wHour, st.wMinute, st.wSecond, message);
+        fclose(log);
+    }
+}
 
 // --- Global Theme Variables ---
 struct ThemeColors {
@@ -43,21 +58,55 @@ COLORREF HexToCOLORREF(const std::string& hex) {
 
 // --- Theme Loading ---
 void LoadTheme() {
-    std::ifstream f("theme.json");
-    if (!f.is_open()) return;
+    LogError("LoadTheme: Starting theme load...");
 
-    json data = json::parse(f);
-    g_Theme.window_bg = HexToCOLORREF(data["colors"]["window_bg"]);
-    g_Theme.window_text = HexToCOLORREF(data["colors"]["window_text"]);
-    g_Theme.highlight_bg = HexToCOLORREF(data["colors"]["highlight_bg"]);
-    g_Theme.highlight_text = HexToCOLORREF(data["colors"]["highlight_text"]);
-    g_Theme.button_face = HexToCOLORREF(data["colors"]["button_face"]);
-    g_Theme.button_text = HexToCOLORREF(data["colors"]["button_text"]);
-    g_Theme.header_bg = HexToCOLORREF(data["colors"]["header_bg"]);
+    // Get the DLL's directory path
+    wchar_t dllPath[MAX_PATH];
+    GetModuleFileNameW(g_hModule, dllPath, MAX_PATH);
 
-    g_Theme.h_window_bg_brush = CreateSolidBrush(g_Theme.window_bg);
-    g_Theme.h_header_bg_brush = CreateSolidBrush(g_Theme.header_bg);
-    g_ThemeLoaded = true;
+    // Remove DLL filename, keep directory
+    wchar_t* lastSlash = wcsrchr(dllPath, L'\\');
+    if (lastSlash) *(lastSlash + 1) = L'\0';
+
+    // Append theme.json
+    wcscat_s(dllPath, MAX_PATH, L"theme.json");
+
+    // Convert to narrow string for ifstream
+    char narrowPath[MAX_PATH];
+    WideCharToMultiByte(CP_UTF8, 0, dllPath, -1, narrowPath, MAX_PATH, NULL, NULL);
+
+    char logMsg[512];
+    sprintf_s(logMsg, 512, "LoadTheme: Looking for theme.json at: %s", narrowPath);
+    LogError(logMsg);
+
+    std::ifstream f(narrowPath);
+    if (!f.is_open()) {
+        LogError("LoadTheme: FAILED to open theme.json - File not found!");
+        return;
+    }
+
+    LogError("LoadTheme: theme.json opened successfully, parsing...");
+
+    try {
+        json data = json::parse(f);
+        g_Theme.window_bg = HexToCOLORREF(data["colors"]["window_bg"]);
+        g_Theme.window_text = HexToCOLORREF(data["colors"]["window_text"]);
+        g_Theme.highlight_bg = HexToCOLORREF(data["colors"]["highlight_bg"]);
+        g_Theme.highlight_text = HexToCOLORREF(data["colors"]["highlight_text"]);
+        g_Theme.button_face = HexToCOLORREF(data["colors"]["button_face"]);
+        g_Theme.button_text = HexToCOLORREF(data["colors"]["button_text"]);
+        g_Theme.header_bg = HexToCOLORREF(data["colors"]["header_bg"]);
+
+        g_Theme.h_window_bg_brush = CreateSolidBrush(g_Theme.window_bg);
+        g_Theme.h_header_bg_brush = CreateSolidBrush(g_Theme.header_bg);
+        g_ThemeLoaded = true;
+
+        LogError("LoadTheme: Theme loaded and parsed successfully!");
+    } catch (const std::exception& e) {
+        char errorMsg[512];
+        sprintf_s(errorMsg, 512, "LoadTheme: JSON parse error: %s", e.what());
+        LogError(errorMsg);
+    }
 }
 
 // --- Detour Functions ---
@@ -150,21 +199,46 @@ HWND FindEventListView(HWND hParent) {
 
 // --- Initialization and Deinitialization ---
 void InitializeTheme() {
+    LogError("InitializeTheme: Starting initialization...");
+
     LoadTheme();
+    if (!g_ThemeLoaded) {
+        LogError("InitializeTheme: Theme failed to load, aborting hook installation");
+        return;
+    }
+
+    LogError("InitializeTheme: Installing Detours hooks...");
     DetourTransactionBegin();
     DetourUpdateThread(GetCurrentThread());
     DetourAttach((PVOID*)&TrueGetSysColor, (PVOID)DetouredGetSysColor);
     DetourAttach((PVOID*)&TrueGetSysColorBrush, (PVOID)DetouredGetSysColorBrush);
     DetourAttach((PVOID*)&TrueDrawThemeBackground, (PVOID)DetouredDrawThemeBackground);
-    DetourTransactionCommit();
+
+    LONG error = DetourTransactionCommit();
+    if (error != NO_ERROR) {
+        char errorMsg[256];
+        sprintf_s(errorMsg, 256, "InitializeTheme: DetourTransactionCommit FAILED with error %ld", error);
+        LogError(errorMsg);
+        return;
+    }
+
+    LogError("InitializeTheme: Detours hooks installed successfully!");
 
     HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
     if (hEventViewer) {
+        LogError("InitializeTheme: Found Event Viewer window, searching for ListView...");
         g_hListView = FindEventListView(hEventViewer);
         if (g_hListView) {
             g_pOriginalListViewProc = (WNDPROC)SetWindowLongPtr(g_hListView, GWLP_WNDPROC, (LONG_PTR)CustomListViewProc);
+            LogError("InitializeTheme: ListView subclassed successfully");
+        } else {
+            LogError("InitializeTheme: ListView not found");
         }
+    } else {
+        LogError("InitializeTheme: Event Viewer window not found");
     }
+
+    LogError("InitializeTheme: Initialization complete!");
 }
 
 void DeinitializeTheme() {
@@ -187,13 +261,17 @@ void DeinitializeTheme() {
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
         case DLL_PROCESS_ATTACH:
-            CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)InitializeTheme, NULL, 0, NULL);
+            DisableThreadLibraryCalls(hModule);
+            g_hModule = hModule;
+            LogError("DllMain: DLL_PROCESS_ATTACH - Calling InitializeTheme...");
+            InitializeTheme();
             break;
         case DLL_THREAD_ATTACH:
             break;
         case DLL_THREAD_DETACH:
             break;
         case DLL_PROCESS_DETACH:
+            LogError("DllMain: DLL_PROCESS_DETACH - Cleaning up...");
             DeinitializeTheme();
             break;
     }

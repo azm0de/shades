@@ -1,11 +1,11 @@
 {
   "colors": {
-    "window_bg": "#1E1E1E",
-    "window_text": "#D4D4D4",
-    "highlight_bg": "#2A2D2E",
-    "highlight_text": "#FFFFFF",
-    "button_face": "#333333",
-    "button_text": "#D4D4D4",
-    "header_bg": "#333333"
+    "window_bg": "#2D1B69",
+    "window_text": "#00FF00",
+    "highlight_bg": "#4B2A9E",
+    "highlight_text": "#00FF00",
+    "button_face": "#3D2580",
+    "button_text": "#00FF00",
+    "header_bg": "#3D2580"
   }
 }
