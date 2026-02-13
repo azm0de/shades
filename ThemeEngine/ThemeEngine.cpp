@@ -180,26 +180,85 @@ void LoadTheme() {
 }
 
 
+// --- Toggle transition detection (called from Detours hooks) ---
+// The timer and WH_CALLWNDPROC hook are created on the injection remote thread,
+// which exits after LoadLibraryA returns - so they never fire. Instead, we detect
+// enable/disable transitions in the Detours hooks which are process-wide.
+static bool g_lastKnownMutexState = true;
+static bool g_inMutexTransition = false;
+
+void CheckMutexTransition(bool currentMutexState) {
+    if (g_inMutexTransition) return; // Prevent reentrancy
+    if (currentMutexState == g_lastKnownMutexState) return;
+
+    g_inMutexTransition = true;
+    g_ThemedControls.clear();
+
+    if (currentMutexState && g_ThemeLoaded) {
+        // Theme just RE-ENABLED - re-apply direct colors to known controls
+        LogError("CheckMutexTransition: Theme RE-ENABLED - re-applying colors");
+        if (g_hListView && IsWindow(g_hListView)) {
+            PostMessage(g_hListView, LVM_SETBKCOLOR, 0, (LPARAM)g_Theme.window_bg);
+            PostMessage(g_hListView, LVM_SETTEXTBKCOLOR, 0, (LPARAM)g_Theme.window_bg);
+            PostMessage(g_hListView, LVM_SETTEXTCOLOR, 0, (LPARAM)g_Theme.window_text);
+        }
+        if (g_hTreeView && IsWindow(g_hTreeView)) {
+            PostMessage(g_hTreeView, TVM_SETBKCOLOR, 0, (LPARAM)g_Theme.window_bg);
+            PostMessage(g_hTreeView, TVM_SETTEXTCOLOR, 0, (LPARAM)g_Theme.window_text);
+        }
+    } else {
+        // Theme just DISABLED - reset direct colors to system defaults
+        LogError("CheckMutexTransition: Theme DISABLED - resetting colors");
+        if (g_hListView && IsWindow(g_hListView)) {
+            PostMessage(g_hListView, LVM_SETBKCOLOR, 0, (LPARAM)CLR_DEFAULT);
+            PostMessage(g_hListView, LVM_SETTEXTBKCOLOR, 0, (LPARAM)CLR_DEFAULT);
+            PostMessage(g_hListView, LVM_SETTEXTCOLOR, 0, (LPARAM)CLR_DEFAULT);
+        }
+        if (g_hTreeView && IsWindow(g_hTreeView)) {
+            PostMessage(g_hTreeView, TVM_SETBKCOLOR, 0, (LPARAM)(COLORREF)-1);
+            PostMessage(g_hTreeView, TVM_SETTEXTCOLOR, 0, (LPARAM)(COLORREF)-1);
+        }
+    }
+
+    g_lastKnownMutexState = currentMutexState;
+    g_inMutexTransition = false;
+}
+
 // --- Timer callback for periodic re-theming (Phase 2.1) ---
+// NOTE: This timer is created on the injection remote thread, which exits after
+// LoadLibraryA returns. The timer is destroyed when its thread exits, so this
+// callback effectively never fires. It's kept for correctness in case the
+// architecture changes to use a persistent thread. Toggle detection is handled
+// by CheckMutexTransition() in the Detours hooks instead.
 void CALLBACK ThemeTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
     if (!g_ThemeLoaded) return;
 
-    // Check for theme file updates
+    HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
+    bool mutexPresent = (hMutex != NULL);
+    if (hMutex) CloseHandle(hMutex);
+
+    if (!mutexPresent) return;
+
+    HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
+
+    // Check for theme file updates (hot reload)
     if (g_themeFilePath[0] != 0) {
         FILETIME currentWriteTime = GetLastWriteTime(g_themeFilePath);
         if (CompareFileTime(&currentWriteTime, &g_lastThemeWriteTime) != 0) {
             LogError("ThemeTimerProc: Theme file changed, reloading...");
             LoadTheme();
+            g_ThemedControls.clear();
 
-            // Update ListView colors after reload
             if (g_hListView && IsWindow(g_hListView)) {
                 ListView_SetBkColor(g_hListView, g_Theme.window_bg);
                 ListView_SetTextBkColor(g_hListView, g_Theme.window_bg);
                 ListView_SetTextColor(g_hListView, g_Theme.window_text);
             }
+            if (g_hTreeView && IsWindow(g_hTreeView)) {
+                TreeView_SetBkColor(g_hTreeView, g_Theme.window_bg);
+                TreeView_SetTextColor(g_hTreeView, g_Theme.window_text);
+            }
 
-            // Force full repaint
-            HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
             if (hEventViewer) {
                 InvalidateRect(hEventViewer, NULL, TRUE);
                 RedrawWindow(hEventViewer, NULL, NULL, RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_UPDATENOW);
@@ -207,7 +266,6 @@ void CALLBACK ThemeTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTim
         }
     }
 
-    HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
     if (hEventViewer) {
         EnumChildWindows(hEventViewer, EnumChildProcForAllControls, 0);
     }
@@ -216,9 +274,13 @@ void CALLBACK ThemeTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTim
 // --- Detour Functions ---
 DWORD WINAPI DetouredGetSysColor(int nIndex) {
     HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
-    if (hMutex == NULL) return TrueGetSysColor(nIndex);
-    CloseHandle(hMutex);
+    bool mutexPresent = (hMutex != NULL);
+    if (hMutex) CloseHandle(hMutex);
 
+    // Detect enable/disable transitions for toggle support
+    CheckMutexTransition(mutexPresent);
+
+    if (!mutexPresent) return TrueGetSysColor(nIndex);
     if (!g_ThemeLoaded) return TrueGetSysColor(nIndex);
 
     switch (nIndex) {
@@ -933,15 +995,8 @@ void InitializeTheme() {
 
     LogError("InitializeTheme: All Detours hooks installed successfully!");
 
-    // Install WH_CALLWNDPROC hook for dialog theming
-    g_hCallWndProcHook = SetWindowsHookEx(WH_CALLWNDPROC, CallWndProcHook, g_hModule, GetCurrentThreadId());
-    if (g_hCallWndProcHook) {
-        LogError("InitializeTheme: WH_CALLWNDPROC hook installed successfully!");
-    } else {
-        LogError("InitializeTheme: Failed to install WH_CALLWNDPROC hook");
-    }
-
     // Phase 2.1: Start periodic re-theming timer (500ms interval)
+    // Timer fires on the worker thread's message loop (see InitWorkerThread)
     g_ThemeTimerId = SetTimer(NULL, 0, 500, ThemeTimerProc);
     if (g_ThemeTimerId) {
         LogError("InitializeTheme: Periodic re-theming timer started (500ms)");
@@ -950,6 +1005,22 @@ void InitializeTheme() {
     }
 
     HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
+
+    // Install WH_CALLWNDPROC hook targeting the Event Viewer's UI thread
+    // (not GetCurrentThreadId() which is the worker thread with no windows)
+    DWORD uiThreadId = 0;
+    if (hEventViewer) {
+        uiThreadId = GetWindowThreadProcessId(hEventViewer, NULL);
+    }
+    g_hCallWndProcHook = SetWindowsHookEx(WH_CALLWNDPROC, CallWndProcHook,
+        g_hModule, uiThreadId ? uiThreadId : 0);
+    if (g_hCallWndProcHook) {
+        char hookMsg[256];
+        sprintf_s(hookMsg, 256, "InitializeTheme: WH_CALLWNDPROC hook installed on thread %lu", uiThreadId);
+        LogError(hookMsg);
+    } else {
+        LogError("InitializeTheme: Failed to install WH_CALLWNDPROC hook");
+    }
     if (hEventViewer) {
         LogError("InitializeTheme: Found Event Viewer window, searching for controls...");
 
@@ -1100,17 +1171,38 @@ void DeinitializeTheme() {
     LogError("DeinitializeTheme: Cleanup complete");
 }
 
+// Worker thread for initialization — avoids loader lock deadlock.
+// DllMain holds the OS loader lock, so cross-thread SendMessage calls
+// (like ListView_SetBkColor) deadlock when the UI thread tries to
+// acquire it. By deferring to a worker thread, the loader lock is
+// released before any SendMessage calls happen.
+DWORD WINAPI InitWorkerThread(LPVOID lpParam) {
+    Sleep(200); // Wait for DllMain to return and loader lock to release
+    LogError("InitWorkerThread: Starting initialization...");
+    InitializeTheme();
+
+    // Force full repaint now that all hooks and subclasses are installed
+    HWND hEV = FindWindowW(L"MMCMainFrame", L"Event Viewer");
+    if (hEV) {
+        RedrawWindow(hEV, NULL, NULL, RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_UPDATENOW);
+    }
+
+    // Run message loop so SetTimer callbacks actually fire
+    // (timers require a message pump on their owning thread)
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        DispatchMessage(&msg);
+    }
+    return 0;
+}
+
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
         case DLL_PROCESS_ATTACH:
             DisableThreadLibraryCalls(hModule);
             g_hModule = hModule;
-            LogError("DllMain: DLL_PROCESS_ATTACH - Calling InitializeTheme...");
-            InitializeTheme();
-            break;
-        case DLL_THREAD_ATTACH:
-            break;
-        case DLL_THREAD_DETACH:
+            LogError("DllMain: DLL_PROCESS_ATTACH - Spawning init worker thread...");
+            CreateThread(NULL, 0, InitWorkerThread, NULL, 0, NULL);
             break;
         case DLL_PROCESS_DETACH:
             LogError("DllMain: DLL_PROCESS_DETACH - Cleaning up...");

@@ -1,6 +1,5 @@
-﻿; Event Viewer Themer - NSIS Installer Script
+; SHADES - NSIS Installer Script
 ; Version 1.2.0
-; Created for professional distribution
 
 ;--------------------------------
 ; Includes
@@ -12,8 +11,8 @@
 ; General Configuration
 
 ; Application information
-!define PRODUCT_NAME "Event Viewer Themer"
-\!define PRODUCT_VERSION "1.2.0"
+!define PRODUCT_NAME "SHADES"
+!define PRODUCT_VERSION "1.2.0"
 !define PRODUCT_PUBLISHER "azm0de"
 !define PRODUCT_WEB_SITE "https://github.com/azm0de/shades"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
@@ -24,10 +23,10 @@ Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "EventViewerThemer-Setup.exe"
 
 ; Default installation directory
-InstallDir "$PROGRAMFILES64\EventViewerThemer"
+InstallDir "$PROGRAMFILES64\SHADES"
 
 ; Get installation folder from registry if available (for upgrades)
-InstallDirRegKey HKLM "Software\EventViewerThemer" "InstallPath"
+InstallDirRegKey HKLM "Software\SHADES" "InstallPath"
 
 ; Request application privileges for Windows Vista and higher
 RequestExecutionLevel admin
@@ -64,6 +63,8 @@ VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
 !insertmacro MUI_PAGE_INSTFILES
 
 ; Finish page configuration
+!define MUI_FINISHPAGE_RUN "$INSTDIR\SHADES.exe"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch SHADES now"
 !define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\README.txt"
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "View README"
 !define MUI_FINISHPAGE_LINK "Visit project on GitHub"
@@ -95,8 +96,16 @@ Section "Core Files (Required)" SecCore
   File "dist\EventViewerThemer\README.txt"
   File "dist\EventViewerThemer\LICENSE.txt"
 
+  ; Install preset themes
+  SetOutPath "$INSTDIR\themes"
+  File "themes\Dracula.json"
+  File "themes\Nord.json"
+  File "themes\Monokai.json"
+  File "themes\Solarized_Dark.json"
+
   ; Store installation folder
-  WriteRegStr HKLM "Software\EventViewerThemer" "InstallPath" $INSTDIR
+  SetOutPath "$INSTDIR"
+  WriteRegStr HKLM "Software\SHADES" "InstallPath" $INSTDIR
 
   ; Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -111,34 +120,32 @@ Section "Core Files (Required)" SecCore
   WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "NoModify" 1
   WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "NoRepair" 1
 
-  ; Estimate installation size (in KB) - approximately 2MB
-  WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "EstimatedSize" 2048
+  ; Estimate installation size (in KB) - approximately 3MB
+  WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "EstimatedSize" 3072
 
 SectionEnd
 
 Section "Start Menu Shortcuts" SecStartMenu
   ; Create Start Menu folder
-  CreateDirectory "$SMPROGRAMS\Event Viewer Themer"
+  CreateDirectory "$SMPROGRAMS\SHADES"
 
-  ; Create shortcuts (Note: User will need to right-click and "Run as administrator")
-  CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Event Viewer Themer.lnk" "$INSTDIR\SHADES.exe" "" "$INSTDIR\SHADES.exe" 0
-  CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Theme Configurator.lnk" "$INSTDIR\ThemeConfig.exe"
-  CreateShortcut "$SMPROGRAMS\Event Viewer Themer\README.lnk" "$INSTDIR\README.txt"
-  CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+  ; Create shortcuts (admin manifest handles elevation automatically)
+  CreateShortcut "$SMPROGRAMS\SHADES\SHADES.lnk" "$INSTDIR\SHADES.exe" "" "$INSTDIR\SHADES.exe" 0
+  CreateShortcut "$SMPROGRAMS\SHADES\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
 
 SectionEnd
 
 Section "Desktop Shortcut" SecDesktop
   ; Create desktop shortcut
-  CreateShortcut "$DESKTOP\Event Viewer Themer.lnk" "$INSTDIR\SHADES.exe" "" "$INSTDIR\SHADES.exe" 0
+  CreateShortcut "$DESKTOP\SHADES.lnk" "$INSTDIR\SHADES.exe" "" "$INSTDIR\SHADES.exe" 0
 SectionEnd
 
 ;--------------------------------
 ; Section Descriptions
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} "Core application files (required)"
-  !insertmacro MUI_DESCRIPTION_TEXT ${SecStartMenu} "Add shortcuts to Start Menu for easy access"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} "Core application files and preset themes (required)"
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecStartMenu} "Add shortcut to Start Menu"
   !insertmacro MUI_DESCRIPTION_TEXT ${SecDesktop} "Add a shortcut to your Desktop"
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
@@ -148,14 +155,19 @@ SectionEnd
 Section "Uninstall"
 
   ; Remove Start Menu shortcuts
-  Delete "$SMPROGRAMS\Event Viewer Themer\Event Viewer Themer.lnk"
-  Delete "$SMPROGRAMS\Event Viewer Themer\Theme Configurator.lnk"
-  Delete "$SMPROGRAMS\Event Viewer Themer\README.lnk"
-  Delete "$SMPROGRAMS\Event Viewer Themer\Uninstall.lnk"
-  RMDir "$SMPROGRAMS\Event Viewer Themer"
+  Delete "$SMPROGRAMS\SHADES\SHADES.lnk"
+  Delete "$SMPROGRAMS\SHADES\Uninstall.lnk"
+  RMDir "$SMPROGRAMS\SHADES"
 
   ; Remove Desktop shortcut
-  Delete "$DESKTOP\Event Viewer Themer.lnk"
+  Delete "$DESKTOP\SHADES.lnk"
+
+  ; Remove preset themes
+  Delete "$INSTDIR\themes\Dracula.json"
+  Delete "$INSTDIR\themes\Nord.json"
+  Delete "$INSTDIR\themes\Monokai.json"
+  Delete "$INSTDIR\themes\Solarized_Dark.json"
+  RMDir "$INSTDIR\themes"
 
   ; Remove application files
   Delete "$INSTDIR\SHADES.exe"
@@ -169,9 +181,12 @@ Section "Uninstall"
   ; Remove installation directory
   RMDir "$INSTDIR"
 
+  ; Remove scheduled task if exists
+  nsExec::ExecToLog 'schtasks /delete /tn "SHADES" /f'
+
   ; Remove registry keys
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
-  DeleteRegKey HKLM "Software\EventViewerThemer"
+  DeleteRegKey HKLM "Software\SHADES"
 
 SectionEnd
 
@@ -179,12 +194,18 @@ SectionEnd
 ; Installer Functions
 
 Function .onInit
-  ; Display welcome note
-  ; Installer will proceed without additional checks
+  ; Check if SHADES is already running and offer to close it
+  FindWindow $0 "ShadesTrayWnd" ""
+  ${If} $0 != 0
+    MessageBox MB_OKCANCEL|MB_ICONINFORMATION "SHADES is currently running. It will be closed before installation." IDOK +2
+    Abort
+    SendMessage $0 ${WM_CLOSE} 0 0
+    Sleep 1000
+  ${EndIf}
 FunctionEnd
 
 Function un.onInit
   ; Confirm uninstallation
-  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove ${PRODUCT_NAME} and all of its components?" IDYES +2
+  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove ${PRODUCT_NAME}?" IDYES +2
   Abort
 FunctionEnd

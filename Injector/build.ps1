@@ -26,7 +26,7 @@ if (-not $vsPath) {
     exit 1
 }
 
-cmd /c "`"$vsPath`" && cl.exe /O2 /EHsc /MD /I`"..\libs\json`" Injector.cpp user32.lib shell32.lib /link /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup /Fe:SHADES.exe 2>&1"
+cmd /c "`"$vsPath`" && rc.exe /fo SHADES.res SHADES.rc && cl.exe /O2 /EHsc /MD /I`"..\libs\json`" Injector.cpp SHADES.res user32.lib shell32.lib /link /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup /OUT:SHADES.exe 2>&1"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""

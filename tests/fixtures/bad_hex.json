@@ -1,0 +1,12 @@
+{
+  "name": "Bad Hex Theme",
+  "colors": {
+    "window_bg": "ZZZ",
+    "window_text": "not-a-color",
+    "highlight_bg": "#GGHHII",
+    "highlight_text": "rgb(255,0,0)",
+    "button_face": "#12345",
+    "button_text": "#1234567",
+    "header_bg": "red"
+  }
+}

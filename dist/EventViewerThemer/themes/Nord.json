@@ -1,0 +1,20 @@
+{
+  "name": "Nord",
+  "author": "azm0de",
+  "version": "1.0",
+  "colors": {
+    "window_bg": "#2E3440",
+    "window_text": "#D8DEE9",
+    "highlight_bg": "#3B4252",
+    "highlight_text": "#ECEFF4",
+    "button_face": "#3B4252",
+    "button_text": "#D8DEE9",
+    "header_bg": "#434C5E",
+    "scrollbar_bg": "#2E3440",
+    "scrollbar_thumb": "#4C566A",
+    "menubar_bg": "#2E3440",
+    "menubar_text": "#D8DEE9",
+    "statusbar_bg": "#242933",
+    "statusbar_text": "#D8DEE9"
+  }
+}

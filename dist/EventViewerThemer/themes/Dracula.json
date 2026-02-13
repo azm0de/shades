@@ -1,0 +1,20 @@
+{
+  "name": "Dracula",
+  "author": "azm0de",
+  "version": "1.0",
+  "colors": {
+    "window_bg": "#282A36",
+    "window_text": "#F8F8F2",
+    "highlight_bg": "#44475A",
+    "highlight_text": "#F8F8F2",
+    "button_face": "#44475A",
+    "button_text": "#F8F8F2",
+    "header_bg": "#6272A4",
+    "scrollbar_bg": "#21222C",
+    "scrollbar_thumb": "#44475A",
+    "menubar_bg": "#282A36",
+    "menubar_text": "#F8F8F2",
+    "statusbar_bg": "#191A21",
+    "statusbar_text": "#F8F8F2"
+  }
+}

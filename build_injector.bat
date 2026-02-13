@@ -16,7 +16,8 @@ if exist "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\B
 )
 
 cd /d "%~dp0Injector"
-cl.exe /O2 /EHsc /MD /I"..\libs\json" Injector.cpp user32.lib shell32.lib /link /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup /Fe:SHADES.exe
+rc.exe /fo SHADES.res SHADES.rc
+cl.exe /O2 /EHsc /MD /I"..\libs\json" Injector.cpp SHADES.res user32.lib shell32.lib /link /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup /OUT:SHADES.exe
 if %ERRORLEVEL% EQU 0 (
     echo Build successful!
     copy SHADES.exe ..\dist\EventViewerThemer\SHADES.exe /Y

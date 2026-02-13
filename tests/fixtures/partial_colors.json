@@ -1,0 +1,8 @@
+{
+  "name": "Partial Theme",
+  "colors": {
+    "window_bg": "#1A1A2E",
+    "window_text": "#E0E0E0",
+    "highlight_bg": "#16213E"
+  }
+}

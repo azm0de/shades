@@ -1,0 +1,20 @@
+{
+  "name": "Monokai",
+  "author": "azm0de",
+  "version": "1.0",
+  "colors": {
+    "window_bg": "#272822",
+    "window_text": "#F8F8F2",
+    "highlight_bg": "#49483E",
+    "highlight_text": "#F8F8F2",
+    "button_face": "#3E3D32",
+    "button_text": "#F8F8F2",
+    "header_bg": "#49483E",
+    "scrollbar_bg": "#272822",
+    "scrollbar_thumb": "#49483E",
+    "menubar_bg": "#272822",
+    "menubar_text": "#F8F8F2",
+    "statusbar_bg": "#1E1F1C",
+    "statusbar_text": "#F8F8F2"
+  }
+}
