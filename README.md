@@ -84,32 +84,40 @@ Event Viewer Themer transforms Windows Event Viewer from its default bright them
    - Download `EventViewerThemer.zip`
    - Extract to any folder (e.g., `C:\Tools\EventViewerThemer\`)
 
-2. **Run Event Viewer:**
-   ```
-   Press Win+R, type: eventvwr.msc
-   ```
-
-3. **Apply the theme:**
+2. **Apply the theme:**
    - Right-click `SHADES.exe`
    - Select "Run as administrator"
-   - Keep the window open to maintain the theme
+   - If Event Viewer isn't running, SHADES will prompt you to launch it
+   - Click "Yes" to automatically open Event Viewer
+   - The dark theme applies immediately!
 
-4. **Enjoy your themed Event Viewer!**
+3. **Enjoy your themed Event Viewer!**
+   - The SHADES tray icon appears in your system tray
+   - Right-click the tray icon for options
 
 ### Usage Tips
 
+**System Tray:**
+- The application now minimizes to the system tray.
+- Right-click the tray icon to:
+  - Enable/Disable the theme
+  - Open the **Theme Configurator**
+  - Exit the application
+
+**Theme Configurator:**
+- Use the built-in GUI to customize colors easily.
+- Changes are applied instantly (hot-reloaded) without restarting.
+
 **Enable Theme:**
-- Open Event Viewer first
-- Run SHADES.exe as Administrator
+- **NEW**: Simply run SHADES.exe as Administrator
+- If Event Viewer isn't running, SHADES will ask if you want to launch it automatically
+- Click "Yes" to auto-launch Event Viewer and apply the theme
+- Or manually open Event Viewer first, then run SHADES.exe
 - Theme applies immediately
 
 **Disable Theme:**
-- Simply close the SHADES.exe window
-- Event Viewer returns to original appearance
-
-**Keep Theme Active:**
-- Leave SHADES.exe running while using Event Viewer
-- You can minimize the window to the taskbar
+- Right-click tray icon -> Disable Theme
+- Or Exit the application
 
 ### Command-Line Arguments (v1.1+)
 

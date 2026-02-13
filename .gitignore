@@ -44,3 +44,6 @@ Makefile
 # Temporary files
 *.log
 *.tmp
+
+# Windows artifacts
+nul
