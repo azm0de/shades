@@ -1,108 +1,71 @@
-# Setup Instructions
+# Build Instructions
 
-## Required Folder Structure
+## Prerequisites
 
-Your project should be organized as follows:
+- **MSVC 2019 or 2022** (Build Tools or full Visual Studio)
+- **Windows SDK** (included with Visual Studio)
+- **Git**
 
+All third-party dependencies are included in the repo (`libs/detours/`, `libs/json/`).
+
+## Quick Build
+
+Open a terminal in the project root and run:
+
+```cmd
+:: Build ThemeEngine.dll
+build_theme_engine.bat
+
+:: Build SHADES.exe (injector)
+build_injector.bat
+
+:: Build GUI v2.0
+test_build_gui.bat
 ```
-C:\Users\Justin\DEV\shades\
-├── /libs/
-│   └── /detours/
-│       ├── /include/
-│       │   └── detours.h       <-- Copy from compiled Detours
-│       └── /lib.x64/
-│           └── detours.lib     <-- Copy from compiled Detours
-├── /ThemeEngine/
-│   ├── ThemeEngine.cpp
-│   └── CMakeLists.txt
-├── /Injector/
-│   ├── Injector.cpp
-│   └── CMakeLists.txt
-└── PROJECT_PLAN.md
+
+The build scripts auto-detect Visual Studio 2019/2022 (BuildTools, Community, or Professional).
+
+Built binaries are automatically copied to `dist\EventViewerThemer\`.
+
+## CMake Build (Alternative)
+
+```cmd
+:: ThemeEngine
+cd ThemeEngine
+mkdir build && cd build
+cmake ..
+cmake --build . --config Release
+
+:: Injector
+cd ..\..\Injector
+mkdir build && cd build
+cmake ..
+cmake --build . --config Release
 ```
 
-## Step 1: Compile Microsoft Detours
+## Testing
 
-1. Clone the Detours repository:
-   ```
-   git clone https://github.com/microsoft/Detours.git
-   ```
+1. Copy `SHADES.exe`, `ThemeEngine.dll`, and `theme.json` into the same folder
+2. Open Event Viewer (`Win+R` -> `eventvwr.msc`)
+3. Right-click `SHADES.exe` -> Run as administrator
+4. The dark theme applies immediately; a tray icon appears
 
-2. Open "Developer Command Prompt for VS" (or x64 Native Tools Command Prompt)
+## Compiling the Detours Library (if needed)
 
-3. Navigate to the Detours directory and compile:
-   ```
-   cd Detours
-   nmake
-   ```
+The precompiled Detours library is already in `libs/detours/`. If you need to recompile:
 
-4. This will create:
-   - `include/detours.h`
-   - `lib.X64/detours.lib` (for 64-bit)
-   - `lib.X86/detours.lib` (for 32-bit)
+1. Clone: `git clone https://github.com/microsoft/Detours.git`
+2. Open a "x64 Native Tools Command Prompt"
+3. Run `cd Detours && nmake`
+4. Copy `include/detours.h` to `libs/detours/include/`
+5. Copy `lib.X64/detours.lib` to `libs/detours/lib.x64/`
 
-## Step 2: Copy Detours Files
+## Building the Installer
 
-1. Create the libs folder structure:
-   ```
-   mkdir libs\detours\include
-   mkdir libs\detours\lib.x64
-   ```
+Requires [NSIS](https://nsis.sourceforge.io/) (v3.x):
 
-2. Copy the compiled files:
-   - Copy `Detours/include/detours.h` to `libs/detours/include/`
-   - Copy `Detours/lib.X64/detours.lib` to `libs/detours/lib.x64/`
+```cmd
+makensis installer.nsi
+```
 
-## Step 3: Build ThemeEngine.dll
-
-1. Navigate to the ThemeEngine folder:
-   ```
-   cd ThemeEngine
-   ```
-
-2. Create build directory and run CMake:
-   ```
-   mkdir build
-   cd build
-   cmake ..
-   cmake --build .
-   ```
-
-3. The compiled `ThemeEngine.dll` will be in the build folder
-
-## Step 4: Build Injector.exe
-
-1. Navigate to the Injector folder:
-   ```
-   cd ../../Injector
-   ```
-
-2. Create build directory and run CMake:
-   ```
-   mkdir build
-   cd build
-   cmake ..
-   cmake --build .
-   ```
-
-3. The compiled `Injector.exe` will be in the build folder
-
-## Step 5: Test the Theme
-
-1. Copy `ThemeEngine.dll` and `Injector.exe` to the same folder
-
-2. Open Event Viewer (Windows Key + search for "Event Viewer")
-
-3. Run `Injector.exe` as Administrator:
-   ```
-   Right-click Injector.exe → Run as administrator
-   ```
-
-4. The Event Viewer should immediately apply the dark theme!
-
-## Troubleshooting
-
-- **"Could not open process"**: Run Injector.exe as Administrator
-- **"No mmc.exe process found"**: Make sure Event Viewer is running first
-- **"Could not find LoadLibraryA"**: Ensure you're running on Windows with kernel32.dll
-- **CMake can't find Detours**: Verify the folder structure matches exactly as shown above
+Output: `dist/EventViewerThemer-Setup.exe`

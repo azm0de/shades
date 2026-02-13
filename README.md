@@ -1,653 +1,279 @@
-﻿# Event Viewer Themer
+# SHADES - Event Viewer Dark Theme
 
-> A lightweight Windows utility that applies customizable dark themes to Windows Event Viewer using dynamic DLL injection and API hooking.
+> A lightweight Windows utility that applies customizable dark themes to Windows Event Viewer using DLL injection and API hooking.
 
 [![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/azm0de/shades)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.2-orange.svg)](https://github.com/azm0de/shades/releases)
+[![Version](https://img.shields.io/badge/version-v1.2-orange.svg)](https://github.com/azm0de/shades/releases)
 
 ---
 
-## What is Event Viewer Themer?
+## What is SHADES?
 
-Event Viewer Themer transforms Windows Event Viewer from its default bright theme into a beautiful, customizable dark theme - without modifying any system files. The theme is applied dynamically at runtime and can be enabled or disabled instantly.
+SHADES transforms Windows Event Viewer from its default bright theme into a customizable dark theme -- without modifying any system files. The theme is applied dynamically at runtime via DLL injection and can be toggled on/off instantly from the system tray.
 
-**Key Highlights:**
+**Highlights:**
 - Dark theme for Windows Event Viewer (eventvwr.msc)
-- Fully customizable colors via JSON configuration
-- Completely reversible - no system file modifications
-- Real-time toggle (enable/disable without restart)
-- Lightweight (~2MB total size)
+- System tray icon with toggle, configure, and exit options
+- Hot-reload: edit `theme.json` and see changes instantly
+- Fully customizable colors via JSON
+- CLI flags for scripting (`--config`, `--disable`, `--status`, `--silent`)
+- Completely reversible -- no system files modified
 
 ---
 
-## Features
-
-### For End Users
-- **Easy to Use**: Just run `SHADES.exe` and the theme applies instantly
-- **Customizable Colors**: Edit `theme.json` to create your perfect color scheme
-- **No Installation Required**: Standalone executable, no dependencies
-- **Reversible**: Close the injector to restore original appearance
-- **Safe**: No system files are modified or replaced
-
-### For Developers
-- **Clean C++ Codebase**: Well-structured, documented code
-- **Modern Techniques**: Microsoft Detours for API hooking
-- **Cross-Platform Build**: Supports Windows MSVC and Linux MinGW cross-compilation
-- **Educational**: Learn about DLL injection, API hooking, and Windows internals
-- **Open Source**: MIT licensed, free to use and modify
-
----
-
-## Quick Start (For End Users)
+## Quick Start
 
 ### Requirements
-- Windows 10, 11, or Server 2019/2022 (64-bit)
+- Windows 10/11 or Server 2019/2022 (64-bit)
 - Administrator privileges (required for DLL injection)
-- Windows Event Viewer installed (included by default)
 
-### Installation
+### Portable Install
+1. Download `EventViewerThemer.zip` from [Releases](https://github.com/azm0de/shades/releases)
+2. Extract to any folder
+3. Right-click `SHADES.exe` -> "Run as administrator"
+4. If Event Viewer isn't running, SHADES will prompt you to launch it
+5. The tray icon appears -- right-click it for options
 
-#### Option 1: Installer (Recommended)
+### Installer
+1. Download `EventViewerThemer-Setup.exe` from [Releases](https://github.com/azm0de/shades/releases)
+2. Run the installer and follow the wizard
+3. Launch from Start Menu -> "Event Viewer Themer"
 
-1. **Download the installer:**
-   - Visit [Releases](https://github.com/azm0de/shades/releases)
-   - Download `EventViewerThemer-Setup.exe` (312 KB)
-   - Verify checksum (optional but recommended):
-     ```powershell
-     Get-FileHash EventViewerThemer-Setup.exe -Algorithm SHA256
-     ```
-     Compare with SHA256 in `SHA256SUMS.txt`
+### Usage
 
-2. **Run the installer:**
-   - Double-click `EventViewerThemer-Setup.exe`
-   - Follow the installation wizard
-   - Choose installation directory (default: `C:\Program Files\EventViewerThemer`)
-   - Select shortcut options (Start Menu, Desktop)
-   - Click "Install"
+**System Tray:** SHADES runs in the system tray. Right-click the icon to:
+- Toggle the theme on/off
+- Open the Theme Configurator
+- View About info
+- Exit
 
-3. **Launch the application:**
-   - From Start Menu: `Event Viewer Themer`
-   - Or from Desktop shortcut (if created)
-   - Right-click and select "Run as administrator"
+**Hot-Reload:** Edit `theme.json` while SHADES is running -- changes apply automatically within 500ms.
 
-4. **Open Event Viewer and enjoy your theme!**
-   ```
-   Press Win+R, type: eventvwr.msc
-   ```
+**Disable:** Right-click tray icon -> Exit, or run `SHADES.exe --disable`.
 
-#### Option 2: Portable ZIP (No Installation)
+---
 
-1. **Download the portable version:**
-   - Visit [Releases](https://github.com/azm0de/shades/releases)
-   - Download `EventViewerThemer.zip`
-   - Extract to any folder (e.g., `C:\Tools\EventViewerThemer\`)
+## Command-Line Arguments
 
-2. **Apply the theme:**
-   - Right-click `SHADES.exe`
-   - Select "Run as administrator"
-   - If Event Viewer isn't running, SHADES will prompt you to launch it
-   - Click "Yes" to automatically open Event Viewer
-   - The dark theme applies immediately!
-
-3. **Enjoy your themed Event Viewer!**
-   - The SHADES tray icon appears in your system tray
-   - Right-click the tray icon for options
-
-### Usage Tips
-
-**System Tray:**
-- The application now minimizes to the system tray.
-- Right-click the tray icon to:
-  - Enable/Disable the theme
-  - Open the **Theme Configurator**
-  - Exit the application
-
-**Theme Configurator:**
-- Use the built-in GUI to customize colors easily.
-- Changes are applied instantly (hot-reloaded) without restarting.
-
-**Enable Theme:**
-- **NEW**: Simply run SHADES.exe as Administrator
-- If Event Viewer isn't running, SHADES will ask if you want to launch it automatically
-- Click "Yes" to auto-launch Event Viewer and apply the theme
-- Or manually open Event Viewer first, then run SHADES.exe
-- Theme applies immediately
-
-**Disable Theme:**
-- Right-click tray icon -> Disable Theme
-- Or Exit the application
-
-### Command-Line Arguments (v1.1+)
-
-The injector supports several command-line arguments for automation and scripting:
-
-```cmd
+```
 SHADES.exe [options]
 ```
 
-**Available Options:**
+| Argument | Description |
+|----------|-------------|
+| `--help`, `-h` | Display help |
+| `--version`, `-v` | Display version |
+| `--status` | Check if theme is active |
+| `--silent`, `-s` | Run without console output |
+| `--config <path>` | Use a custom theme.json file |
+| `--disable` | Shut down the running SHADES instance |
 
-| Argument | Description | Example |
-|----------|-------------|---------|
-| `--help`, `-h`, `/?` | Display help message with all options | `SHADES.exe --help` |
-| `--version`, `-v` | Display version information | `SHADES.exe --version` |
-| `--status` | Check if theme is currently active | `SHADES.exe --status` |
-| `--silent`, `-s` | Run without console output | `SHADES.exe --silent` |
-| `--config <path>` | Use custom theme.json file (planned) | `SHADES.exe --config mytheme.json` |
-| `--disable` | Disable active theme (planned) | `SHADES.exe --disable` |
-
-**Usage Examples:**
-
+**Automation example:**
 ```cmd
-# Check if theme is currently active
-SHADES.exe --status
-
-# Enable theme silently (no console window pauses)
-SHADES.exe --silent
-
-# Show help and available options
-SHADES.exe --help
-
-# Display version information
-SHADES.exe --version
-```
-
-**Automation with Task Scheduler:**
-
-```cmd
-# Create scheduled task to auto-enable theme
-schtasks /create /tn "EventViewerTheme" /tr "C:\Program Files\EventViewerThemer\SHADES.exe --silent" /sc onlogon /rl highest
-```
-
-**PowerShell Integration:**
-
-```powershell
-# Check theme status programmatically
-$output = & "C:\Program Files\EventViewerThemer\SHADES.exe" --status
-if ($output -match "ACTIVE") {
-    Write-Host "Theme is running"
-} else {
-    Write-Host "Theme is not active"
-}
+schtasks /create /tn "SHADES" /tr "C:\Program Files\EventViewerThemer\SHADES.exe --silent" /sc onlogon /rl highest
 ```
 
 ---
 
 ## Customization
 
-### Editing Colors
-
-The theme colors are defined in `theme.json`:
+Edit `theme.json` to change colors:
 
 ```json
 {
   "colors": {
-    "window_bg": "#1E1E1E",       // Main window background
-    "window_text": "#D4D4D4",     // Text color
-    "highlight_bg": "#2A2D2E",    // Selection background
-    "highlight_text": "#FFFFFF",   // Selection text color
-    "button_face": "#333333",      // Button background
-    "button_text": "#D4D4D4",      // Button text
-    "header_bg": "#333333"         // Column header background
+    "window_bg": "#1E1E1E",
+    "window_text": "#D4D4D4",
+    "highlight_bg": "#2A2D2E",
+    "highlight_text": "#FFFFFF",
+    "button_face": "#333333",
+    "button_text": "#D4D4D4",
+    "header_bg": "#333333"
   }
 }
 ```
 
-### Popular Color Schemes
+Changes are hot-reloaded automatically when the file is saved.
 
-**Dracula Theme:**
+**Preset themes** (copy into your `theme.json`):
+
+<details>
+<summary>Dracula</summary>
+
 ```json
 {
   "colors": {
-    "window_bg": "#282A36",
-    "window_text": "#F8F8F2",
-    "highlight_bg": "#44475A",
-    "highlight_text": "#F8F8F2",
-    "button_face": "#44475A",
-    "button_text": "#F8F8F2",
+    "window_bg": "#282A36", "window_text": "#F8F8F2",
+    "highlight_bg": "#44475A", "highlight_text": "#F8F8F2",
+    "button_face": "#44475A", "button_text": "#F8F8F2",
     "header_bg": "#6272A4"
   }
 }
 ```
+</details>
 
-**Nord Theme:**
+<details>
+<summary>Nord</summary>
+
 ```json
 {
   "colors": {
-    "window_bg": "#2E3440",
-    "window_text": "#ECEFF4",
-    "highlight_bg": "#3B4252",
-    "highlight_text": "#ECEFF4",
-    "button_face": "#4C566A",
-    "button_text": "#D8DEE9",
+    "window_bg": "#2E3440", "window_text": "#ECEFF4",
+    "highlight_bg": "#3B4252", "highlight_text": "#ECEFF4",
+    "button_face": "#4C566A", "button_text": "#D8DEE9",
     "header_bg": "#5E81AC"
   }
 }
 ```
+</details>
 
-**Monokai Theme:**
+<details>
+<summary>Monokai</summary>
+
 ```json
 {
   "colors": {
-    "window_bg": "#272822",
-    "window_text": "#F8F8F2",
-    "highlight_bg": "#49483E",
-    "highlight_text": "#F8F8F2",
-    "button_face": "#3E3D32",
-    "button_text": "#F8F8F2",
+    "window_bg": "#272822", "window_text": "#F8F8F2",
+    "highlight_bg": "#49483E", "highlight_text": "#F8F8F2",
+    "button_face": "#3E3D32", "button_text": "#F8F8F2",
     "header_bg": "#75715E"
   }
 }
 ```
-
-After editing `theme.json`, restart SHADES.exe to apply changes.
-
----
-
-## How It Works (Technical Overview)
-
-Event Viewer Themer uses a two-component architecture:
-
-### Component 1: ThemeEngine.dll (Theming Engine)
-
-The core theming engine that modifies UI behavior through Windows API hooking:
-
-**API Hooks Implemented:**
-- `GetSysColor` - Returns custom colors for system color indices
-- `GetSysColorBrush` - Returns custom brushes for backgrounds
-- `DrawThemeBackground` - Intercepts theme drawing for headers
-
-**Window Subclassing:**
-- Subclasses the ListView control (SysListView32)
-- Handles `WM_NOTIFY` messages with `NM_CUSTOMDRAW`
-- Applies custom colors to individual list items and selections
-
-**Configuration System:**
-- Reads `theme.json` from disk using nlohmann/json
-- Parses hex color codes (#1E1E1E) to Windows COLORREF format
-- Stores colors in global configuration struct
-
-### Component 2: SHADES.exe (DLL Loader)
-
-The user-facing application that injects ThemeEngine.dll into Event Viewer:
-
-**Process Discovery:**
-- Enumerates running processes using `CreateToolhelp32Snapshot`
-- Identifies `mmc.exe` instances with "Event Viewer" window title
-- Obtains target process ID
-
-**DLL Injection:**
-- Allocates memory in target process (`VirtualAllocEx`)
-- Writes DLL path to target memory (`WriteProcessMemory`)
-- Creates remote thread to load DLL (`CreateRemoteThread` + `LoadLibraryA`)
-
-**IPC Toggle Mechanism:**
-- Creates named mutex: `Global\EventViewerThemeActive`
-- Mutex existence enables theming (checked by all hook functions)
-- Mutex destroyed on exit, automatically disabling theme
-
-### Why DLL Injection?
-
-Traditional theming methods (like High Contrast themes or custom visual styles) either:
-- Require system file modifications (risky, unsigned drivers)
-- Affect all applications globally (not targeted)
-- Don't support per-application customization
-
-DLL injection allows us to:
-- Target only Event Viewer process
-- Make changes reversible (no system modifications)
-- Provide granular control over UI elements
-- Enable real-time toggling
+</details>
 
 ---
 
-## Building from Source (For Developers)
+## How It Works
+
+SHADES uses a two-component architecture:
+
+**ThemeEngine.dll** -- Injected into `mmc.exe` (Event Viewer). Hooks Windows APIs via Microsoft Detours:
+- `GetSysColor` / `GetSysColorBrush` -- Custom system colors
+- `DrawThemeBackground` -- Custom themed control drawing
+- `DrawTextW` / `DrawTextExW` -- Text color overrides
+- `CreateWindowExW` / `SetWindowTextW` -- Window creation hooks
+- Window subclassing for ListView, TreeView, TabControl, and parent windows
+- `NM_CUSTOMDRAW` handling via parent window subclass for ListView row theming
+- 500ms polling timer for hot-reload via file timestamp checking
+
+**SHADES.exe** -- The user-facing injector:
+- Finds `mmc.exe` with "Event Viewer" window title
+- Injects `ThemeEngine.dll` via `VirtualAllocEx` + `CreateRemoteThread` + `LoadLibraryA`
+- Creates a named mutex (`Global\EventViewerThemeActive`) for theme on/off state
+- Runs a system tray icon with toggle/configure/exit menu
+- Supports `--config` (custom theme path via environment variable) and `--disable` (shuts down running instance)
+
+---
+
+## Building from Source
 
 ### Prerequisites
-
-**Required Tools:**
-- CMake 3.10 or higher
-- C++ Compiler (MSVC 2019+ or MinGW-w64 GCC 13+)
-- Windows SDK (for Windows API headers)
+- MSVC 2019+ (Visual Studio Build Tools or full IDE)
+- Windows SDK
 - Git
 
-**Dependencies (Included):**
-- Microsoft Detours 4.0+ (`libs/detours/`)
-- nlohmann/json 3.x (`libs/json/json.hpp`)
+Dependencies are included: Microsoft Detours (`libs/detours/`), nlohmann/json (`libs/json/`).
 
-### Build Instructions
-
-#### Option 1: Windows with MSVC (Native)
+### Build Commands
 
 ```cmd
-# Clone the repository
 git clone https://github.com/azm0de/shades.git
 cd shades
 
 # Build ThemeEngine.dll
-cd ThemeEngine
-mkdir build && cd build
-cmake ..
-cmake --build . --config Release
-cd ../..
+build_theme_engine.bat
 
 # Build SHADES.exe
-cd Injector
-mkdir build && cd build
-cmake ..
-cmake --build . --config Release
-cd ../..
+build_injector.bat
 
-# Binaries will be in:
-# - ThemeEngine/build/Release/ThemeEngine.dll
-# - Injector/build/Release/SHADES.exe
+# Build GUI (v2.0-alpha)
+test_build_gui.bat
 ```
 
-#### Option 2: Linux Cross-Compilation with MinGW
-
-```bash
-# Install MinGW-w64 toolchain
-sudo apt-get install mingw-w64 cmake git
-
-# Clone the repository
-git clone https://github.com/azm0de/shades.git
-cd shades
-
-# Build ThemeEngine.dll
-cmake -DCMAKE_TOOLCHAIN_FILE=mingw-w64-toolchain.cmake \
-      -S ThemeEngine -B ThemeEngine/build \
-      -DCMAKE_BUILD_TYPE=Release
-cmake --build ThemeEngine/build
-
-# Build SHADES.exe
-cmake -DCMAKE_TOOLCHAIN_FILE=mingw-w64-toolchain.cmake \
-      -S Injector -B Injector/build \
-      -DCMAKE_BUILD_TYPE=Release
-cmake --build Injector/build
-
-# Binaries will be in:
-# - ThemeEngine/build/ThemeEngine.dll
-# - Injector/build/SHADES.exe
-```
+Build scripts auto-detect Visual Studio 2019/2022 installations.
 
 ### Project Structure
 
 ```
 shades/
-â”œâ”€â”€ Injector/                   # Phase 2: DLL Injector
-â”‚   â”œâ”€â”€ Injector.cpp           # Main injector logic (189 lines)
-â”‚   â”œâ”€â”€ CMakeLists.txt         # Build configuration
-â”‚   â””â”€â”€ build/                 # Build artifacts
-â”œâ”€â”€ ThemeEngine/               # Phase 1: Theming Engine
-â”‚   â”œâ”€â”€ ThemeEngine.cpp        # Core theming hooks (202 lines)
-â”‚   â”œâ”€â”€ CMakeLists.txt         # Build configuration
-â”‚   â””â”€â”€ build/                 # Build artifacts
-â”œâ”€â”€ libs/                      # Third-party libraries
-â”‚   â”œâ”€â”€ detours/               # Microsoft Detours
-â”‚   â”‚   â”œâ”€â”€ include/detours.h
-â”‚   â”‚   â””â”€â”€ lib.x64/libdetours.a
-â”‚   â””â”€â”€ json/                  # nlohmann JSON
-â”‚       â””â”€â”€ json.hpp
-â”œâ”€â”€ dist/                      # Distribution package
-â”‚   â””â”€â”€ EventViewerThemer.zip
-â”œâ”€â”€ theme.json                 # Default theme configuration
-â”œâ”€â”€ mingw-w64-toolchain.cmake  # Cross-compilation toolchain
-â”œâ”€â”€ PROJECT_PLAN.md            # Future enhancements roadmap
-â”œâ”€â”€ PROJECT_PLAN_COMPLETED.md  # Original completed plan
-â”œâ”€â”€ SETUP_INSTRUCTIONS.md      # Detailed build instructions
-â”œâ”€â”€ LICENSE                    # MIT License
-â””â”€â”€ README.md                  # This file
++-- Injector/              # DLL injector + system tray
+|   +-- Injector.cpp
+|   +-- CMakeLists.txt
++-- ThemeEngine/           # Theming engine DLL
+|   +-- ThemeEngine.cpp
+|   +-- CMakeLists.txt
++-- src/gui/               # GUI v2.0 (color editor, preview, theme gallery)
+|   +-- main.cpp
+|   +-- ColorEditor.cpp/h
+|   +-- PreviewPanel.cpp/h
+|   +-- ButtonBar.cpp/h
+|   +-- ColorPicker.cpp/h
+|   +-- ColorUtils.cpp/h
+|   +-- commands.h
+|   +-- version.h
++-- src/theme_manager/     # Theme loading/saving
+|   +-- ThemeManager.cpp/h
++-- Configurator/          # Standalone theme configurator
++-- libs/                  # Third-party (Detours, nlohmann/json)
++-- dist/                  # Distribution binaries
++-- theme.json             # Default theme
++-- installer.nsi          # NSIS installer script
 ```
-
-### Development Workflow
-
-1. **Make code changes** in `ThemeEngine/ThemeEngine.cpp` or `Injector/Injector.cpp`
-2. **Rebuild the modified component:**
-   ```cmd
-   cd ThemeEngine/build  # or Injector/build
-   cmake --build . --config Release
-   ```
-3. **Test your changes:**
-   - Copy new binaries to test directory
-   - Run Event Viewer
-   - Run SHADES.exe as Administrator
-   - Verify theme applies correctly
-
-4. **Debug with Visual Studio Code:**
-   - Install C/C++ extension
-   - Configure launch.json for debugging
-   - Attach to `mmc.exe` process for ThemeEngine debugging
-   - Debug SHADES.exe directly for injection logic
 
 ---
 
 ## Troubleshooting
 
-### "Injection failed" Error
-
-**Cause:** Event Viewer is not running or injector lacks permissions
-
-**Solution:**
-- Make sure Event Viewer (eventvwr.msc) is open before running injector
-- Right-click SHADES.exe and select "Run as administrator"
-
-### Theme Not Applying
-
-**Cause:** theme.json file is missing or malformed
-
-**Solution:**
-- Verify `theme.json` exists in the same directory as `SHADES.exe`
-- Check JSON syntax with a validator (https://jsonlint.com)
-- Restore default theme.json from the distribution package
-
-### Colors Are Wrong
-
-**Cause:** Invalid hex color codes in theme.json
-
-**Solution:**
-- Use 6-digit hex format: `#RRGGBB` (e.g., `#1E1E1E`)
-- Do NOT use 3-digit shorthand or RGB() format
-- Use uppercase or lowercase hex digits (both work)
-
-### Antivirus Blocking SHADES.exe
-
-**Cause:** DLL injection techniques trigger heuristic detection
-
-**Solution:**
-- Add exception for EventViewerThemer folder in your antivirus
-- This is a false positive - code is open source and safe
-- Build from source to verify there's no malware
-
-### Multiple Event Viewer Windows
-
-**Cause:** Current implementation targets first found Event Viewer
-
-**Solution:**
-- Close all Event Viewer instances
-- Open only one Event Viewer
-- Run injector
-- Future versions will support multiple instances
-
-### How to Uninstall
-
-**If installed via installer:**
-- Windows 10/11: Settings â†’ Apps â†’ Event Viewer Themer â†’ Uninstall
-- Or: Start Menu â†’ Event Viewer Themer â†’ Uninstall
-- Or: Run `C:\Program Files\EventViewerThemer\Uninstall.exe`
-
-**If using portable ZIP:**
-- Simply delete the extracted folder
-- No registry entries or system files to clean up
-
----
-
-## Security & Privacy
-
-### Is This Safe?
-
-**Yes, this application is safe when used responsibly:**
-
-- **No System Modifications**: Does not change any Windows system files
-- **Reversible**: Completely removed when injector is closed
-- **Open Source**: All code is visible and auditable
-- **Local Only**: No network connections, no data collection
-- **MIT Licensed**: Free to inspect, modify, and verify
-
-### Why Does It Need Administrator Privileges?
-
-DLL injection requires elevated privileges to:
-- Open remote process handles with `PROCESS_ALL_ACCESS`
-- Allocate memory in remote process
-- Create remote threads
-
-These are legitimate Windows APIs used by many debugging tools, profilers, and utilities.
-
-### Antivirus Detection
-
-Some antivirus software may flag DLL injectors as potentially unwanted programs (PUPs) because:
-- Malware can use similar techniques
-- Heuristic analysis detects "suspicious" API calls
-
-**This is a false positive.** The code is:
-- Open source and fully auditable
-- Only targets Event Viewer on your own system
-- Non-persistent (no startup entries, no system changes)
-- MIT licensed legitimate software
-
-**Recommended:** Add an exception for the EventViewerThemer folder in your antivirus settings.
-
----
-
-## Contributing
-
-Contributions are welcome! Whether you're fixing bugs, adding features, or improving documentation, your help is appreciated.
-
-### How to Contribute
-
-1. **Fork the repository** on GitHub
-2. **Create a feature branch:** `git checkout -b feature/my-new-feature`
-3. **Make your changes** and test thoroughly
-4. **Commit with descriptive messages:** `git commit -m "Add: GUI configuration tool"`
-5. **Push to your fork:** `git push origin feature/my-new-feature`
-6. **Open a Pull Request** with a clear description
-
-### Development Guidelines
-
-- Follow existing code style and formatting
-- Add comments for complex logic
-- Test on Windows 10 and 11 before submitting
-- Update documentation if changing functionality
-- Keep commits focused and atomic
-
-### Reporting Issues
-
-Found a bug or have a feature request?
-
-1. Check [existing issues](https://github.com/azm0de/shades/issues) first
-2. If new, create an issue with:
-   - Clear, descriptive title
-   - Steps to reproduce (for bugs)
-   - Expected vs actual behavior
-   - Your Windows version and system specs
-   - Screenshots if applicable
-
----
-
-## Roadmap
-
-See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the complete future enhancement roadmap.
-
-### Coming Soon
-- GUI configuration tool with visual color picker
-- System tray integration for easy control
-- Command-line arguments (--enable, --disable, --status)
-- Code signing to eliminate antivirus warnings
-
-### Long Term
-- Support for other Windows management tools (perfmon, devmgmt, etc.)
-- Theme marketplace for sharing custom themes
-- Auto-start with Windows option
-- Advanced customization (fonts, icons, conditional formatting)
+| Problem | Solution |
+|---------|----------|
+| "Injection failed" | Run SHADES.exe as Administrator |
+| Theme not applying | Ensure `theme.json` and `ThemeEngine.dll` are next to `SHADES.exe` |
+| Colors wrong | Use `#RRGGBB` hex format in `theme.json` |
+| Antivirus blocks it | Add an exception -- DLL injection triggers heuristic detection (false positive) |
+| Multiple Event Viewer windows | SHADES targets the first found instance |
 
 ---
 
 ## FAQ
 
-### Q: Does this work on Windows 7/8?
+**Q: Does this work on Windows 7/8?**
+Not tested. Targets Windows 10+ (64-bit).
 
-**A:** Not tested. The application targets Windows 10+ (64-bit). It may work on Windows 7 x64, but this is not officially supported.
+**Q: Can I theme other applications?**
+Currently Event Viewer only. The architecture could be adapted for other MMC snap-ins.
 
-### Q: Can I theme other Windows applications?
+**Q: Will Windows updates break it?**
+Unlikely -- uses stable Win32 APIs. Major architecture changes could theoretically affect it.
 
-**A:** Currently only Event Viewer is supported. Future versions may support additional MMC snap-ins. The architecture could be adapted for other applications with modification.
+**Q: Is there a GUI?**
+Yes -- a v2.0 GUI with a visual color editor, live preview panel, and theme gallery is included (`test_build_gui.bat` to build).
 
-### Q: Will this break if Windows updates?
+---
 
-**A:** Unlikely. The application uses stable Windows APIs that have been consistent for many years. However, major Windows architecture changes could potentially affect functionality.
+## Contributing
 
-### Q: Can I use this on a work computer?
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Make changes and test on Windows 10/11
+4. Open a Pull Request
 
-**A:** Check with your IT department first. While the software is legitimate, corporate policies may restrict DLL injection tools or software from unknown publishers.
-
-### Q: Is there a GUI version?
-
-**A:** Not yet. A GUI configuration tool is planned for v2.0 (see roadmap). The current version uses a simple command-line interface.
-
-### Q: Why not just use High Contrast themes?
-
-**A:** High Contrast themes affect all applications and don't provide fine-grained control. Event Viewer Themer only themes Event Viewer and allows complete color customization.
+Report issues at [GitHub Issues](https://github.com/azm0de/shades/issues).
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License. See [LICENSE](LICENSE).
 
-### Third-Party Licenses
-
-- **Microsoft Detours**: MIT License (Copyright (c) Microsoft Corporation)
-- **nlohmann/json**: MIT License (Copyright (c) 2013-2022 Niels Lohmann)
-
-All third-party dependencies use permissive open-source licenses compatible with this project.
+Third-party: Microsoft Detours (MIT), nlohmann/json (MIT).
 
 ---
 
-## Acknowledgments
+**Version:** 1.2 | **Last Updated:** February 2026
 
-- **Microsoft Detours** - For the excellent API hooking library
-- **Niels Lohmann** - For the fantastic header-only JSON library
-- **Windows Internals Community** - For invaluable documentation and resources
-- **All Contributors** - Thank you for your contributions and support!
-
----
-
-## Support
-
-- **Documentation**: Read this README and [SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)
-- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/azm0de/shades/issues)
-- **Discussions**: Ask questions on [GitHub Discussions](https://github.com/azm0de/shades/discussions)
-- **Email**: Contact the maintainer at [azm0de@github](mailto:azm0de@users.noreply.github.com)
-
----
-
-## Project Status
-
-**Status:** Active Development
-**Version:** 1.2 (Release)
-**Last Updated:** November 2025
-
-Event Viewer Themer is actively maintained and accepting contributions. Star the repository to show your support!
-
----
-
-<div align="center">
-
-**Made with passion by [@azm0de](https://github.com/azm0de)**
-
-If you find this project useful, please consider giving it a star on GitHub!
+Made by [@azm0de](https://github.com/azm0de)
 
 [![GitHub stars](https://img.shields.io/github/stars/azm0de/shades.svg?style=social&label=Star)](https://github.com/azm0de/shades)
-
-</div>

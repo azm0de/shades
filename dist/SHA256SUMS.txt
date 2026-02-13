@@ -1,8 +1,9 @@
-SHA256 Checksums for Event Viewer Themer v1.0
+SHA256 Checksums for SHADES v1.2
 
-EventViewerThemer-Setup.exe:
-1F32BD239AFAFCF9E6ADDE10DE2E05F8612432329642636C0EEAB8367B3E8888
+Note: These checksums need to be regenerated after each build.
+Run the following to verify:
 
-To verify the installer integrity:
-PowerShell: Get-FileHash EventViewerThemer-Setup.exe -Algorithm SHA256
-Compare the output hash with the value above.
+  PowerShell:  Get-FileHash <file> -Algorithm SHA256
+  cmd:         certutil -hashfile <file> SHA256
+
+Checksums will be published with each GitHub Release.
