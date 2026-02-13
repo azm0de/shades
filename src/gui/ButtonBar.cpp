@@ -11,6 +11,21 @@ namespace Shades {
 const wchar_t* ButtonBar::CLASS_NAME = L"ShadesButtonBar";
 bool ButtonBar::s_classRegistered = false;
 
+const COLORREF ButtonBar::CLR_BACKGROUND = RGB(0x1E, 0x1E, 0x1E);
+const COLORREF ButtonBar::CLR_BORDER_TOP = RGB(0x3F, 0x3F, 0x46);
+const COLORREF ButtonBar::CLR_PRIMARY_BG = RGB(0x0E, 0x7A, 0x90);
+const COLORREF ButtonBar::CLR_PRIMARY_BG_HOVER = RGB(0x15, 0x95, 0xB0);
+const COLORREF ButtonBar::CLR_PRIMARY_BG_PRESSED = RGB(0x0A, 0x5F, 0x73);
+const COLORREF ButtonBar::CLR_PRIMARY_TEXT = RGB(0xFF, 0xFF, 0xFF);
+const COLORREF ButtonBar::CLR_SECONDARY_BG = RGB(0x27, 0x27, 0x2A);
+const COLORREF ButtonBar::CLR_SECONDARY_BG_HOVER = RGB(0x3F, 0x3F, 0x46);
+const COLORREF ButtonBar::CLR_SECONDARY_BG_PRESSED = RGB(0x1E, 0x1E, 0x1E);
+const COLORREF ButtonBar::CLR_SECONDARY_TEXT = RGB(0xE4, 0xE4, 0xE7);
+const COLORREF ButtonBar::CLR_SECONDARY_BORDER = RGB(0x52, 0x52, 0x5B);
+const COLORREF ButtonBar::CLR_DISABLED_BG = RGB(0x1E, 0x1E, 0x1E);
+const COLORREF ButtonBar::CLR_DISABLED_TEXT = RGB(0x71, 0x71, 0x7A);
+const COLORREF ButtonBar::CLR_DISABLED_BORDER = RGB(0x3F, 0x3F, 0x46);
+
 //=============================================================================
 // Constructor
 //=============================================================================
@@ -93,7 +108,7 @@ void ButtonBar::RegisterWindowClass() {
     wc.lpfnWndProc = StaticWndProc;
     wc.hInstance = GetModuleHandle(NULL);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = CreateSolidBrush(COLOR_BACKGROUND);
+    wc.hbrBackground = CreateSolidBrush(CLR_BACKGROUND);
     wc.lpszClassName = CLASS_NAME;
 
     RegisterClassExW(&wc);
@@ -236,12 +251,12 @@ void ButtonBar::OnPaint(HDC hdc) {
     RECT rcClient;
     GetClientRect(m_hwnd, &rcClient);
 
-    HBRUSH hBrushBg = CreateSolidBrush(COLOR_BACKGROUND);
+    HBRUSH hBrushBg = CreateSolidBrush(CLR_BACKGROUND);
     FillRect(hdc, &rcClient, hBrushBg);
     DeleteObject(hBrushBg);
 
     // Draw top border
-    HPEN hPenBorder = CreatePen(PS_SOLID, 1, COLOR_BORDER_TOP);
+    HPEN hPenBorder = CreatePen(PS_SOLID, 1, CLR_BORDER_TOP);
     HPEN hOldPen = (HPEN)SelectObject(hdc, hPenBorder);
     MoveToEx(hdc, 0, 0, NULL);
     LineTo(hdc, rcClient.right, 0);
@@ -339,20 +354,20 @@ void ButtonBar::DrawButton(HDC hdc, const ButtonInfo& button) {
 //=============================================================================
 COLORREF ButtonBar::GetButtonBackgroundColor(const ButtonInfo& button) const {
     if (!button.enabled) {
-        return COLOR_DISABLED_BG;
+        return CLR_DISABLED_BG;
     }
 
     if (button.style == ButtonStyle::Primary) {
         switch (button.state) {
-            case ButtonState::Pressed: return COLOR_PRIMARY_BG_PRESSED;
-            case ButtonState::Hover:   return COLOR_PRIMARY_BG_HOVER;
-            default:                   return COLOR_PRIMARY_BG;
+            case ButtonState::Pressed: return CLR_PRIMARY_BG_PRESSED;
+            case ButtonState::Hover:   return CLR_PRIMARY_BG_HOVER;
+            default:                   return CLR_PRIMARY_BG;
         }
     } else {
         switch (button.state) {
-            case ButtonState::Pressed: return COLOR_SECONDARY_BG_PRESSED;
-            case ButtonState::Hover:   return COLOR_SECONDARY_BG_HOVER;
-            default:                   return COLOR_SECONDARY_BG;
+            case ButtonState::Pressed: return CLR_SECONDARY_BG_PRESSED;
+            case ButtonState::Hover:   return CLR_SECONDARY_BG_HOVER;
+            default:                   return CLR_SECONDARY_BG;
         }
     }
 }
@@ -362,13 +377,13 @@ COLORREF ButtonBar::GetButtonBackgroundColor(const ButtonInfo& button) const {
 //=============================================================================
 COLORREF ButtonBar::GetButtonTextColor(const ButtonInfo& button) const {
     if (!button.enabled) {
-        return COLOR_DISABLED_TEXT;
+        return CLR_DISABLED_TEXT;
     }
 
     if (button.style == ButtonStyle::Primary) {
-        return COLOR_PRIMARY_TEXT;
+        return CLR_PRIMARY_TEXT;
     } else {
-        return COLOR_SECONDARY_TEXT;
+        return CLR_SECONDARY_TEXT;
     }
 }
 
@@ -377,14 +392,14 @@ COLORREF ButtonBar::GetButtonTextColor(const ButtonInfo& button) const {
 //=============================================================================
 COLORREF ButtonBar::GetButtonBorderColor(const ButtonInfo& button) const {
     if (!button.enabled) {
-        return COLOR_DISABLED_BORDER;
+        return CLR_DISABLED_BORDER;
     }
 
     if (button.style == ButtonStyle::Secondary) {
-        return COLOR_SECONDARY_BORDER;
+        return CLR_SECONDARY_BORDER;
     }
 
-    return COLOR_PRIMARY_BG;
+    return CLR_PRIMARY_BG;
 }
 
 //=============================================================================

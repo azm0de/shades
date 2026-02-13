@@ -1,5 +1,5 @@
-; Event Viewer Themer - NSIS Installer Script
-; Version 1.0
+﻿; Event Viewer Themer - NSIS Installer Script
+; Version 1.2.0
 ; Created for professional distribution
 
 ;--------------------------------
@@ -13,7 +13,7 @@
 
 ; Application information
 !define PRODUCT_NAME "Event Viewer Themer"
-!define PRODUCT_VERSION "1.0.0"
+\!define PRODUCT_VERSION "1.2.0"
 !define PRODUCT_PUBLISHER "azm0de"
 !define PRODUCT_WEB_SITE "https://github.com/azm0de/shades"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
@@ -45,7 +45,7 @@ SetCompressor /SOLID lzma
 ;--------------------------------
 ; Version Information
 
-VIProductVersion "1.0.0.0"
+VIProductVersion "1.2.0.0"
 VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
 VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"
 VIAddVersionKey "LegalCopyright" "MIT License - Copyright 2025"
@@ -90,6 +90,7 @@ Section "Core Files (Required)" SecCore
   ; Install main application files
   File "dist\EventViewerThemer\SHADES.exe"
   File "dist\EventViewerThemer\ThemeEngine.dll"
+  File "dist\EventViewerThemer\ThemeConfig.exe"
   File "dist\EventViewerThemer\theme.json"
   File "dist\EventViewerThemer\README.txt"
   File "dist\EventViewerThemer\LICENSE.txt"
@@ -121,7 +122,7 @@ Section "Start Menu Shortcuts" SecStartMenu
 
   ; Create shortcuts (Note: User will need to right-click and "Run as administrator")
   CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Event Viewer Themer.lnk" "$INSTDIR\SHADES.exe" "" "$INSTDIR\SHADES.exe" 0
-  CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Configure Theme.lnk" "notepad.exe" '"$INSTDIR\theme.json"'
+  CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Theme Configurator.lnk" "$INSTDIR\ThemeConfig.exe"
   CreateShortcut "$SMPROGRAMS\Event Viewer Themer\README.lnk" "$INSTDIR\README.txt"
   CreateShortcut "$SMPROGRAMS\Event Viewer Themer\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
 
@@ -148,7 +149,7 @@ Section "Uninstall"
 
   ; Remove Start Menu shortcuts
   Delete "$SMPROGRAMS\Event Viewer Themer\Event Viewer Themer.lnk"
-  Delete "$SMPROGRAMS\Event Viewer Themer\Configure Theme.lnk"
+  Delete "$SMPROGRAMS\Event Viewer Themer\Theme Configurator.lnk"
   Delete "$SMPROGRAMS\Event Viewer Themer\README.lnk"
   Delete "$SMPROGRAMS\Event Viewer Themer\Uninstall.lnk"
   RMDir "$SMPROGRAMS\Event Viewer Themer"
@@ -159,6 +160,7 @@ Section "Uninstall"
   ; Remove application files
   Delete "$INSTDIR\SHADES.exe"
   Delete "$INSTDIR\ThemeEngine.dll"
+  Delete "$INSTDIR\ThemeConfig.exe"
   Delete "$INSTDIR\theme.json"
   Delete "$INSTDIR\README.txt"
   Delete "$INSTDIR\LICENSE.txt"

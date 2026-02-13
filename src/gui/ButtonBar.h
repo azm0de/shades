@@ -124,23 +124,24 @@ private:
     static const int SIDE_PADDING = 20;
 
     // Colors (using Windows modern dark theme palette)
-    static const COLORREF COLOR_BACKGROUND = RGB(0x1E, 0x1E, 0x1E);  // #1E1E1E
-    static const COLORREF COLOR_BORDER_TOP = RGB(0x3F, 0x3F, 0x46);   // #3F3F46
+    // Prefixed with CLR_ to avoid Windows macro conflicts (e.g. COLOR_BACKGROUND)
+    static const COLORREF CLR_BACKGROUND;       // #1E1E1E
+    static const COLORREF CLR_BORDER_TOP;        // #3F3F46
 
-    static const COLORREF COLOR_PRIMARY_BG = RGB(0x0E, 0x7A, 0x90);        // #0E7A90 (teal accent)
-    static const COLORREF COLOR_PRIMARY_BG_HOVER = RGB(0x15, 0x95, 0xB0);  // Lighter teal
-    static const COLORREF COLOR_PRIMARY_BG_PRESSED = RGB(0x0A, 0x5F, 0x73); // Darker teal
-    static const COLORREF COLOR_PRIMARY_TEXT = RGB(0xFF, 0xFF, 0xFF);      // White
+    static const COLORREF CLR_PRIMARY_BG;        // #0E7A90 (teal accent)
+    static const COLORREF CLR_PRIMARY_BG_HOVER;  // Lighter teal
+    static const COLORREF CLR_PRIMARY_BG_PRESSED; // Darker teal
+    static const COLORREF CLR_PRIMARY_TEXT;       // White
 
-    static const COLORREF COLOR_SECONDARY_BG = RGB(0x27, 0x27, 0x2A);       // #27272A
-    static const COLORREF COLOR_SECONDARY_BG_HOVER = RGB(0x3F, 0x3F, 0x46); // #3F3F46
-    static const COLORREF COLOR_SECONDARY_BG_PRESSED = RGB(0x1E, 0x1E, 0x1E); // #1E1E1E
-    static const COLORREF COLOR_SECONDARY_TEXT = RGB(0xE4, 0xE4, 0xE7);     // #E4E4E7
-    static const COLORREF COLOR_SECONDARY_BORDER = RGB(0x52, 0x52, 0x5B);   // #52525B
+    static const COLORREF CLR_SECONDARY_BG;       // #27272A
+    static const COLORREF CLR_SECONDARY_BG_HOVER;  // #3F3F46
+    static const COLORREF CLR_SECONDARY_BG_PRESSED; // #1E1E1E
+    static const COLORREF CLR_SECONDARY_TEXT;      // #E4E4E7
+    static const COLORREF CLR_SECONDARY_BORDER;    // #52525B
 
-    static const COLORREF COLOR_DISABLED_BG = RGB(0x1E, 0x1E, 0x1E);
-    static const COLORREF COLOR_DISABLED_TEXT = RGB(0x71, 0x71, 0x7A);      // #71717A (gray)
-    static const COLORREF COLOR_DISABLED_BORDER = RGB(0x3F, 0x3F, 0x46);
+    static const COLORREF CLR_DISABLED_BG;
+    static const COLORREF CLR_DISABLED_TEXT;       // #71717A (gray)
+    static const COLORREF CLR_DISABLED_BORDER;
 
     // Class name
     static const wchar_t* CLASS_NAME;

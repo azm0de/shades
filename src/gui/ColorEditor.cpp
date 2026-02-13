@@ -253,11 +253,13 @@ void ColorEditor::ClearTheme() {
 void ColorEditor::SaveChanges() {
     if (!m_currentTheme || !m_isDirty) return;
 
-    // Save functionality will be implemented when ThemeManager is updated
-    // For now, just clear the dirty flag
-    m_isDirty = false;
+    // Update theme colors from editor properties
+    Theme* mutableTheme = const_cast<Theme*>(m_currentTheme);
+    for (const auto& prop : m_properties) {
+        mutableTheme->colors[prop.key] = ColorUtils::ColorRefToHex(prop.currentColor);
+    }
 
-    // TODO: Call ThemeManager->SaveTheme() when implemented
+    m_isDirty = false;
 }
 
 //=============================================================================
@@ -319,7 +321,7 @@ void ColorEditor::OnScroll(int scrollCode, int pos) {
     m_scrollPos = max(0, min(m_scrollPos, maxScroll));
 
     if (m_scrollPos != oldPos) {
-        SetScrollPos(SB_VERT, m_scrollPos, TRUE);
+        ::SetScrollPos(m_hwnd, SB_VERT, m_scrollPos, TRUE);
         ScrollWindowEx(m_hwnd, 0, oldPos - m_scrollPos, NULL, NULL, NULL, NULL, SW_INVALIDATE | SW_ERASE);
         UpdateWindow(m_hwnd);
     }
@@ -453,7 +455,7 @@ void ColorEditor::UpdateHexInput(const std::string& propertyKey) {
     ColorProperty* prop = FindProperty(propertyKey);
     if (!prop || !prop->hHexInput) return;
 
-    std::wstring hex = ColorUtils::ColorRefToHex(prop->currentColor);
+    std::wstring hex = ColorUtils::ColorRefToHexW(prop->currentColor);
     SetWindowTextW(prop->hHexInput, hex.c_str());
 }
 

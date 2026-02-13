@@ -1,11 +1,11 @@
-# Event Viewer Themer
+﻿# Event Viewer Themer
 
 > A lightweight Windows utility that applies customizable dark themes to Windows Event Viewer using dynamic DLL injection and API hooking.
 
 [![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/azm0de/shades)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0-orange.svg)](https://github.com/azm0de/shades/releases)
+[![Version](https://img.shields.io/badge/version-1.2-orange.svg)](https://github.com/azm0de/shades/releases)
 
 ---
 
@@ -376,29 +376,29 @@ cmake --build Injector/build
 
 ```
 shades/
-├── Injector/                   # Phase 2: DLL Injector
-│   ├── Injector.cpp           # Main injector logic (189 lines)
-│   ├── CMakeLists.txt         # Build configuration
-│   └── build/                 # Build artifacts
-├── ThemeEngine/               # Phase 1: Theming Engine
-│   ├── ThemeEngine.cpp        # Core theming hooks (202 lines)
-│   ├── CMakeLists.txt         # Build configuration
-│   └── build/                 # Build artifacts
-├── libs/                      # Third-party libraries
-│   ├── detours/               # Microsoft Detours
-│   │   ├── include/detours.h
-│   │   └── lib.x64/libdetours.a
-│   └── json/                  # nlohmann JSON
-│       └── json.hpp
-├── dist/                      # Distribution package
-│   └── EventViewerThemer.zip
-├── theme.json                 # Default theme configuration
-├── mingw-w64-toolchain.cmake  # Cross-compilation toolchain
-├── PROJECT_PLAN.md            # Future enhancements roadmap
-├── PROJECT_PLAN_COMPLETED.md  # Original completed plan
-├── SETUP_INSTRUCTIONS.md      # Detailed build instructions
-├── LICENSE                    # MIT License
-└── README.md                  # This file
+â”œâ”€â”€ Injector/                   # Phase 2: DLL Injector
+â”‚   â”œâ”€â”€ Injector.cpp           # Main injector logic (189 lines)
+â”‚   â”œâ”€â”€ CMakeLists.txt         # Build configuration
+â”‚   â””â”€â”€ build/                 # Build artifacts
+â”œâ”€â”€ ThemeEngine/               # Phase 1: Theming Engine
+â”‚   â”œâ”€â”€ ThemeEngine.cpp        # Core theming hooks (202 lines)
+â”‚   â”œâ”€â”€ CMakeLists.txt         # Build configuration
+â”‚   â””â”€â”€ build/                 # Build artifacts
+â”œâ”€â”€ libs/                      # Third-party libraries
+â”‚   â”œâ”€â”€ detours/               # Microsoft Detours
+â”‚   â”‚   â”œâ”€â”€ include/detours.h
+â”‚   â”‚   â””â”€â”€ lib.x64/libdetours.a
+â”‚   â””â”€â”€ json/                  # nlohmann JSON
+â”‚       â””â”€â”€ json.hpp
+â”œâ”€â”€ dist/                      # Distribution package
+â”‚   â””â”€â”€ EventViewerThemer.zip
+â”œâ”€â”€ theme.json                 # Default theme configuration
+â”œâ”€â”€ mingw-w64-toolchain.cmake  # Cross-compilation toolchain
+â”œâ”€â”€ PROJECT_PLAN.md            # Future enhancements roadmap
+â”œâ”€â”€ PROJECT_PLAN_COMPLETED.md  # Original completed plan
+â”œâ”€â”€ SETUP_INSTRUCTIONS.md      # Detailed build instructions
+â”œâ”€â”€ LICENSE                    # MIT License
+â””â”€â”€ README.md                  # This file
 ```
 
 ### Development Workflow
@@ -473,8 +473,8 @@ shades/
 ### How to Uninstall
 
 **If installed via installer:**
-- Windows 10/11: Settings → Apps → Event Viewer Themer → Uninstall
-- Or: Start Menu → Event Viewer Themer → Uninstall
+- Windows 10/11: Settings â†’ Apps â†’ Event Viewer Themer â†’ Uninstall
+- Or: Start Menu â†’ Event Viewer Themer â†’ Uninstall
 - Or: Run `C:\Program Files\EventViewerThemer\Uninstall.exe`
 
 **If using portable ZIP:**
@@ -635,7 +635,7 @@ All third-party dependencies use permissive open-source licenses compatible with
 ## Project Status
 
 **Status:** Active Development
-**Version:** 1.0 (Release)
+**Version:** 1.2 (Release)
 **Last Updated:** November 2025
 
 Event Viewer Themer is actively maintained and accepting contributions. Star the repository to show your support!

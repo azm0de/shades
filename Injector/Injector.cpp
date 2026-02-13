@@ -152,7 +152,7 @@ void ParseArguments(int argc, char* argv[]) {
             if (i + 1 < argc) {
                 g_customThemePath = argv[i + 1];
                 i++; // Skip next argument
-                Print("Note: --config flag is recognized but custom theme path not yet implemented.");
+                Print("Using custom theme path: " + g_customThemePath);
             } else {
                 PrintError("Error: --config requires a file path argument");
                 g_helpRequested = true;
@@ -160,8 +160,14 @@ void ParseArguments(int argc, char* argv[]) {
             }
         }
         else if (arg == "--disable") {
-            Print("Note: --disable flag is recognized but not yet implemented.");
-            Print("To disable the theme, simply close the injector window.");
+            // Find running SHADES tray window and send WM_CLOSE
+            HWND hTrayWnd = FindWindowA("ShadesTrayWnd", NULL);
+            if (hTrayWnd) {
+                SendMessage(hTrayWnd, WM_CLOSE, 0, 0);
+                Print("Theme disabled. SHADES instance shut down.");
+            } else {
+                PrintError("No active SHADES instance found.");
+            }
             g_helpRequested = true;
             return;
         }
@@ -349,6 +355,12 @@ int main(int argc, char* argv[]) {
     }
     
     g_themeEnabled = true;
+
+    // Set custom theme path environment variable if specified
+    if (!g_customThemePath.empty()) {
+        SetEnvironmentVariableA("SHADES_THEME_PATH", g_customThemePath.c_str());
+        Print("Custom theme path set: " + g_customThemePath);
+    }
 
     Print("Searching for Event Viewer (mmc.exe) process...");
 

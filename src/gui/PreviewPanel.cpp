@@ -228,7 +228,7 @@ void PreviewPanel::OnMouseMove(int x, int y) {
         if (region) {
             // Show tooltip
             COLORREF color = GetThemeColor(region->propertyKey);
-            std::wstring tooltip = region->displayName + L": " + ColorUtils::ColorRefToHex(color);
+            std::wstring tooltip = region->displayName + L": " + ColorUtils::ColorRefToHexW(color);
             SetCursor(LoadCursor(NULL, IDC_HAND));
         } else {
             SetCursor(LoadCursor(NULL, IDC_ARROW));

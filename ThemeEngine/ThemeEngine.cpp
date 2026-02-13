@@ -103,12 +103,21 @@ wchar_t g_themeFilePath[MAX_PATH] = { 0 };
 void LoadTheme() {
     LogError("LoadTheme: Starting theme load...");
 
-    // Get the DLL's directory path if not already set
+    // Get the theme file path if not already set
     if (g_themeFilePath[0] == 0) {
-        GetModuleFileNameW(g_hModule, g_themeFilePath, MAX_PATH);
-        wchar_t* lastSlash = wcsrchr(g_themeFilePath, L'\\');
-        if (lastSlash) *(lastSlash + 1) = L'\0';
-        wcscat_s(g_themeFilePath, MAX_PATH, L"theme.json");
+        // Check for custom path via environment variable (set by --config flag)
+        char customPath[MAX_PATH] = { 0 };
+        DWORD envLen = GetEnvironmentVariableA("SHADES_THEME_PATH", customPath, MAX_PATH);
+        if (envLen > 0 && envLen < MAX_PATH) {
+            MultiByteToWideChar(CP_UTF8, 0, customPath, -1, g_themeFilePath, MAX_PATH);
+            LogError("LoadTheme: Using custom theme path from SHADES_THEME_PATH");
+        } else {
+            // Default: theme.json next to the DLL
+            GetModuleFileNameW(g_hModule, g_themeFilePath, MAX_PATH);
+            wchar_t* lastSlash = wcsrchr(g_themeFilePath, L'\\');
+            if (lastSlash) *(lastSlash + 1) = L'\0';
+            wcscat_s(g_themeFilePath, MAX_PATH, L"theme.json");
+        }
     }
 
     // Update timestamp
@@ -181,7 +190,14 @@ void CALLBACK ThemeTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTim
         if (CompareFileTime(&currentWriteTime, &g_lastThemeWriteTime) != 0) {
             LogError("ThemeTimerProc: Theme file changed, reloading...");
             LoadTheme();
-            
+
+            // Update ListView colors after reload
+            if (g_hListView && IsWindow(g_hListView)) {
+                ListView_SetBkColor(g_hListView, g_Theme.window_bg);
+                ListView_SetTextBkColor(g_hListView, g_Theme.window_bg);
+                ListView_SetTextColor(g_hListView, g_Theme.window_text);
+            }
+
             // Force full repaint
             HWND hEventViewer = FindWindowW(L"MMCMainFrame", L"Event Viewer");
             if (hEventViewer) {
@@ -371,69 +387,12 @@ BOOL WINAPI DetouredSetWindowTextW(HWND hWnd, LPCWSTR lpString) {
 }
 
 // --- Custom ListView Procedure ---
+// NM_CUSTOMDRAW is handled by the parent window (CustomParentProc), not here.
+// This proc handles direct messages to the ListView: WM_ERASEBKGND, colors, etc.
 LRESULT CALLBACK CustomListViewProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, g_pMutexName);
     if (hMutex == NULL) return CallWindowProc(g_pOriginalListViewProc, hWnd, uMsg, wParam, lParam);
     CloseHandle(hMutex);
-
-    // Handle custom draw notifications sent to ListView itself
-    if (g_ThemeLoaded && uMsg == WM_NOTIFY) {
-        LPNMHDR pnmh = (LPNMHDR)lParam;
-
-        if (pnmh->code == NM_CUSTOMDRAW) {
-            LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)lParam;
-
-            char logMsg[512];
-            sprintf_s(logMsg, 512, "CustomListViewProc: NM_CUSTOMDRAW stage=0x%08X item=%lld",
-                     lplvcd->nmcd.dwDrawStage, (long long)lplvcd->nmcd.dwItemSpec);
-            LogError(logMsg);
-
-            switch (lplvcd->nmcd.dwDrawStage) {
-                case CDDS_PREPAINT:
-                    LogError("CustomListViewProc: CDDS_PREPAINT");
-                    return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYSUBITEMDRAW;
-
-                case CDDS_ITEMPREPAINT:
-                {
-                    HDC hdc = lplvcd->nmcd.hdc;
-                    RECT rc = lplvcd->nmcd.rc;
-
-                    if (lplvcd->nmcd.uItemState & CDIS_SELECTED) {
-                        FillRect(hdc, &rc, g_Theme.h_highlight_bg_brush);
-                        lplvcd->clrText = g_Theme.highlight_text;
-                        lplvcd->clrTextBk = g_Theme.highlight_bg;
-                    } else {
-                        FillRect(hdc, &rc, g_Theme.h_window_bg_brush);
-                        lplvcd->clrText = g_Theme.window_text;
-                        lplvcd->clrTextBk = g_Theme.window_bg;
-                    }
-
-                    SetBkMode(hdc, TRANSPARENT);
-                    return CDRF_NOTIFYSUBITEMDRAW | CDRF_NEWFONT;
-                }
-
-                case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
-                {
-                    HDC hdc = lplvcd->nmcd.hdc;
-                    RECT rc;
-
-                    ListView_GetSubItemRect(hWnd, lplvcd->nmcd.dwItemSpec,
-                                           lplvcd->iSubItem, LVIR_BOUNDS, &rc);
-
-                    if (lplvcd->nmcd.uItemState & CDIS_SELECTED) {
-                        FillRect(hdc, &rc, g_Theme.h_highlight_bg_brush);
-                        lplvcd->clrText = g_Theme.highlight_text;
-                    } else {
-                        FillRect(hdc, &rc, g_Theme.h_window_bg_brush);
-                        lplvcd->clrText = g_Theme.window_text;
-                    }
-
-                    SetBkMode(hdc, TRANSPARENT);
-                    return CDRF_NEWFONT;
-                }
-            }
-        }
-    }
 
     // Handle background erasing for ListView
     if (g_ThemeLoaded && uMsg == WM_ERASEBKGND) {
@@ -668,25 +627,20 @@ LRESULT CALLBACK CustomParentProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
             wchar_t className[256];
             GetClassNameW(pnmh->hwndFrom, className, 256);
 
-            // DISABLED: ListView custom draw now handled directly in CustomListViewProc
-            // to avoid message routing conflicts with direct ListView subclassing
-            /*
-            // Handle ListView custom draw
+            // Handle ListView custom draw via parent window
+            // NM_CUSTOMDRAW is sent to the parent, not the ListView itself
             if (wcscmp(className, L"SysListView32") == 0) {
                 LPNMLVCUSTOMDRAW lplvcd = (LPNMLVCUSTOMDRAW)lParam;
 
                 switch (lplvcd->nmcd.dwDrawStage) {
                     case CDDS_PREPAINT:
-                        // Request item-level AND subitem-level notifications for Report View
                         return CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYSUBITEMDRAW;
 
                     case CDDS_ITEMPREPAINT:
                     {
-                        // Explicitly paint item backgrounds for ListView controls
                         HDC hdc = lplvcd->nmcd.hdc;
                         RECT rc = lplvcd->nmcd.rc;
 
-                        // Fill the entire item background BEFORE text is drawn
                         if (lplvcd->nmcd.uItemState & CDIS_SELECTED) {
                             FillRect(hdc, &rc, g_Theme.h_highlight_bg_brush);
                             lplvcd->clrText = g_Theme.highlight_text;
@@ -697,26 +651,21 @@ LRESULT CALLBACK CustomParentProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
                             lplvcd->clrTextBk = g_Theme.window_bg;
                         }
 
-                        // Set transparent text background mode to prevent white rectangles
                         SetBkMode(hdc, TRANSPARENT);
-
-                        return CDRF_NEWFONT | CDRF_SKIPDEFAULT;
+                        return CDRF_NEWFONT;
                     }
 
                     case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
                     {
-                        // Handle Report View column rendering for each subitem
                         HDC hdc = lplvcd->nmcd.hdc;
                         RECT rc;
 
-                        // Get the rectangle for this specific subitem
                         ListView_GetSubItemRect(lplvcd->nmcd.hdr.hwndFrom,
                                                 lplvcd->nmcd.dwItemSpec,
                                                 lplvcd->iSubItem,
                                                 LVIR_BOUNDS,
                                                 &rc);
 
-                        // Paint the subitem background
                         if (lplvcd->nmcd.uItemState & CDIS_SELECTED) {
                             FillRect(hdc, &rc, g_Theme.h_highlight_bg_brush);
                             lplvcd->clrText = g_Theme.highlight_text;
@@ -726,11 +675,10 @@ LRESULT CALLBACK CustomParentProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lP
                         }
 
                         SetBkMode(hdc, TRANSPARENT);
-                        return CDRF_NEWFONT | CDRF_SKIPDEFAULT;
+                        return CDRF_NEWFONT;
                     }
                 }
             }
-            */
         }
     }
 
@@ -1027,6 +975,11 @@ void InitializeTheme() {
             } else {
                 LogError("ListView: double buffering already enabled");
             }
+
+            // Set ListView colors directly as a baseline
+            ListView_SetBkColor(g_hListView, g_Theme.window_bg);
+            ListView_SetTextBkColor(g_hListView, g_Theme.window_bg);
+            ListView_SetTextColor(g_hListView, g_Theme.window_text);
 
             // Force an immediate redraw to trigger custom draw
             InvalidateRect(g_hListView, NULL, TRUE);

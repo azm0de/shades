@@ -1,13 +1,32 @@
 # PowerShell build script for ThemeEngine.dll
-Write-Host "Building ThemeEngine.dll with ListView background fix..." -ForegroundColor Cyan
+Write-Host "Building ThemeEngine.dll..." -ForegroundColor Cyan
 Write-Host ""
 
 # Change to ThemeEngine directory
-Set-Location "C:\Users\Justin\DEV\shades\ThemeEngine"
+Set-Location "$PSScriptRoot"
 
-# Import Visual Studio environment
-$vsPath = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-cmd /c "`"$vsPath`" && cl.exe /LD /O2 /EHsc /MD /I`"..\libs\nlohmann`" /I`"..\libs\detours\include`" ThemeEngine.cpp user32.lib gdi32.lib shell32.lib comctl32.lib ..\libs\detours\lib.X64\detours.lib /link /DEF:ThemeEngine.def /Fe:ThemeEngine.dll 2>&1"
+# Find Visual Studio
+$vsPaths = @(
+    "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat",
+    "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat",
+    "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+    "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+)
+
+$vsPath = $null
+foreach ($p in $vsPaths) {
+    if (Test-Path $p) {
+        $vsPath = $p
+        break
+    }
+}
+
+if (-not $vsPath) {
+    Write-Host "ERROR: Visual Studio not found" -ForegroundColor Red
+    exit 1
+}
+
+cmd /c "`"$vsPath`" && cl.exe /LD /O2 /EHsc /MT /I`"..\libs\nlohmann`" /I`"..\libs\detours\include`" ThemeEngine.cpp ..\libs\detours\lib.X64\detours.lib user32.lib gdi32.lib uxtheme.lib comctl32.lib shell32.lib /link /DEF:ThemeEngine.def /Fe:ThemeEngine.dll 2>&1"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""

@@ -3,10 +3,29 @@ Write-Host "Building SHADES.exe with auto-launch and error dialogs..." -Foregrou
 Write-Host ""
 
 # Change to Injector directory
-Set-Location "C:\Users\Justin\DEV\shades\Injector"
+Set-Location "$PSScriptRoot"
 
-# Import Visual Studio environment
-$vsPath = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+# Find Visual Studio
+$vsPaths = @(
+    "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat",
+    "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat",
+    "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat",
+    "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+)
+
+$vsPath = $null
+foreach ($p in $vsPaths) {
+    if (Test-Path $p) {
+        $vsPath = $p
+        break
+    }
+}
+
+if (-not $vsPath) {
+    Write-Host "ERROR: Visual Studio not found" -ForegroundColor Red
+    exit 1
+}
+
 cmd /c "`"$vsPath`" && cl.exe /O2 /EHsc /MD /I`"..\libs\json`" Injector.cpp user32.lib shell32.lib /link /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup /Fe:SHADES.exe 2>&1"
 
 if ($LASTEXITCODE -eq 0) {
